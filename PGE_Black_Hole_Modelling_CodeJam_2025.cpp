@@ -22,13 +22,16 @@ double dEarthMass = 5.972e+24;	// Earth mass in kg
 double dEarthRadius = 6.371e+6; // Earth radius in meters
 double dSunMass = dSolarMass;	// Sun mass in kg (1 Solar mass = our sun mass :))
 double dSunRadius = 6.9634e+8;	// Sun radius in meters
-
 double dSagittariusAMass = 4.1e6 * dSolarMass; // Mass of Sagittarius A* in kg (approximately 4.154 million solar masses)
-
 double dArbitraryfactor = 2.5;	// Arbitrary factor for visualization of event horizon
 
-float WorldWidth = 100000000000.0f * 2.0f; // Width of the viewport in meters
-float WorldHeight = 75000000000.0f * 2.0f; // Height of the viewport in meters
+// Initial light ray position and direction (very far from the black hole)
+olc::vd2d v2dLoopyLoop = { -1e11, 3.13106302719999999e10 };
+
+olc::vd2d v2dConstLightDir = { C, 0.0 }; // Const Initial direction of the light ray (pointing right along the x-axis)
+
+float WorldWidth = 100000000000.0f * 2.0f; // Width of the viewport in meters  TODO: adjust for better view
+float WorldHeight = 75000000000.0f * 2.0f; // Height of the viewport in meters TODO: adjust for better view
 
 #define OLC_PGEX_SPLASHSCREEN		// Manages the GPL-3.0 Licence requirements 
 #include "olcPGEX_SplashScreen.h"
@@ -221,7 +224,9 @@ public:
 		SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass);
 		//rays.push_back(Ray({ 0.0, 0.0 }, { 1.0, 0.0 }, SagittariusA));
 
-		rays.push_back(Ray({ -1e11, 3.27606302719999999e10 }, { C, 0.0 }, SagittariusA));
+		rays.push_back(Ray(v2dLoopyLoop, v2dConstLightDir, SagittariusA));
+
+		//rays.push_back(Ray({ -1.005e11, 3.13106302719999999e10 }, { C, 0.0 }, SagittariusA));
 
 		return true;
 	}
@@ -230,7 +235,7 @@ public:
 	{
 		Clear(olc::BLACK);
 		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
-		float fRadus = std::min(ScreenWidth(), ScreenHeight()) / 2.0f * 0.1f;
+		float fRadus = std::min(ScreenWidth(), ScreenHeight()) / 2.0f * 0.15f;
 		FillCircle(vCenterPos, fRadus, olc::DARK_YELLOW);
 		FillCircle(vCenterPos, fRadus - 0.5, olc::BLACK);
 		if (GetKey(olc::Key::SPACE).bHeld)
