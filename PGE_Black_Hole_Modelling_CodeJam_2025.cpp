@@ -55,45 +55,80 @@ public:
 	struct PGEBlackHole
 	{
 		olc::vd3d vPosition = { 0.0, 0.0, 0.0 };
-		double dMass;			// The mass of the black hole in kilograms (kg).... these are big numbers!
-		double dr_s;			// the Schwarzschild radius (r_s) can be calculated using the formula: \[r_s = \frac{ 2GM }{c\ ^ 2} \]
-		double dEventHorizon;	// Typically set at 2.5 times the Schwarzschild radius for visualization
+		double Mass;			// The mass of the black hole in kilograms (kg).... these are big numbers!
+		double r_s;			// the Schwarzschild radius (r_s) can be calculated using the formula: \[r_s = \frac{ 2GM }{c\ ^ 2} \]
+		double EventHorizon;	// Typically set at 2.5 times the Schwarzschild radius for visualization
 
-		PGEBlackHole(olc::vf3d vf3dPos, double mass) : vPosition(vf3dPos), dMass(mass)
+		PGEBlackHole(olc::vf3d position, double mass) : vPosition(position), Mass(mass)
 		{
-			dr_s = 2 * G * dMass / (C * C);				/* Schwarzschild radius in meters r_s = \frac{ 2GM }{c\ ^ 2} \ */
-			dEventHorizon = dr_s * dArbitraryfactor;	// Arbitrary factor for visualization
+			r_s = 2 * G * Mass / (C * C);			/* Schwarzschild radius in meters r_s = \frac{ 2GM }{c\ ^ 2} \ */
+			EventHorizon = r_s * dArbitraryfactor;	// Arbitrary factor for visualization
 		}
 	};
 
-
-	// Light ray structure
 	struct Ray {
-		// -- cartesian coords -- //
-		double x;   double y;
-		// -- polar coords -- //
-		double r;   double phi;
-		double dr;  double dphi;
-		std::vector<olc::vd2d> trail; // trail of points
-		double E, L;             // conserved quantities
+		olc::vd2d Position;				// Current position in Cartesian coordinates
+		olc::vd2d Direction;			// Direction vector (velocity in Cartesian)
+		olc::vd2d Polar;				// Polar coordinates (r, phi)
+		std::vector<olc::vd2d> trail; // Trail of positions
 
-		Ray(olc::vd2d pos, olc::vd2d dir, PGEBlackHole blackhole) : x(pos.x), y(pos.y), r(pos.mag()), phi(atan2(pos.y, pos.x)), dr(dir.x), dphi(dir.y) {
-			// step 1) get polar coords (r, phi) :
-			this->r = sqrt(x * x + y * y);
-			this->phi = atan2(y, x);
-			// step 2) seed velocities :
-			dr = dir.x * cos(phi) + dir.y * sin(phi); // m/s
-			dphi = (-dir.x * sin(phi) + dir.y * cos(phi)) / r;
-			// step 3) store conserved quantities
+		double r;		// Radius (magnitude of pos)
+		double phi;		// Angle from origin
+		double dr;		// Radial velocity
+		double dphi;	// Angular velocity
+		double E;		// Energy 
+		double L;		// Angular momentum
+
+		Ray(olc::vd2d position, olc::vd2d direction, PGEBlackHole blackhole)
+			: Position(position), Direction(direction), Polar(position.polar())
+		{
+			// Convert to polar coordinates
+			r = Polar.x;
+			phi = Polar.y;
+
+			// Convert direction to polar velocities
+			dr = Direction.x * cos(phi) + Direction.y * sin(phi);
+			dphi = (-Direction.x * sin(phi) + Direction.y * cos(phi)) / r;
+
+			// Compute conserved quantities, engergy E and angular momentum L
 			L = r * r * dphi;
-			double f = 1.0 - blackhole.dr_s / r;
+			double f = 1.0 - blackhole.r_s / r;
 			double dt_d = sqrt((dr * dr) / (f * f) + (r * r * dphi * dphi) / f);
 			E = f * dt_d;
-			// step 4) start trail :
-			trail.push_back({ x, y });
-		}
 
+			// Initialize trail
+			trail.push_back(Position);
+		}
 	};
+	
+
+	// Light ray structure
+	//struct Ray {
+	//	// -- cartesian coords -- //
+	//	double x;   double y;
+	//	// -- polar coords -- //
+	//	double r;   double phi;
+	//	double dr;  double dphi;
+	//	std::vector<olc::vd2d> trail; // trail of points
+	//	double E, L;             // conserved quantities
+
+	//	Ray(olc::vd2d pos, olc::vd2d dir, PGEBlackHole blackhole) : x(pos.x), y(pos.y), r(pos.mag()), phi(atan2(pos.y, pos.x)), dr(dir.x), dphi(dir.y) {
+	//		// step 1) get polar coords (r, phi) :
+	//		this->r = sqrt(x * x + y * y);
+	//		this->phi = atan2(y, x);
+	//		// step 2) seed velocities :
+	//		dr = dir.x * cos(phi) + dir.y * sin(phi); // m/s
+	//		dphi = (-dir.x * sin(phi) + dir.y * cos(phi)) / r;
+	//		// step 3) store conserved quantities
+	//		L = r * r * dphi;
+	//		double f = 1.0 - blackhole.dr_s / r;
+	//		double dt_d = sqrt((dr * dr) / (f * f) + (r * r * dphi * dphi) / f);
+	//		E = f * dt_d;
+	//		// step 4) start trail :
+	//		trail.push_back({ x, y });
+	//	}
+
+	//};
 	std::vector<Ray> rays;
 
 	PGEBlackHole SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass); // Sagittarius A* black hole
@@ -110,8 +145,8 @@ public:
 		float alpha = 1.0f;
 
 		for (const auto& ray : rays) {
-			screenX = (ray.x / WorldWidth + 0.5) * ScreenWidth();
-			screenY = (ray.y / WorldHeight + 0.5) * ScreenHeight();
+			screenX = (ray.Position.x / WorldWidth + 0.5) * ScreenWidth();
+			screenY = (ray.Position.y / WorldHeight + 0.5) * ScreenHeight();
 			Draw(screenX, screenY, olc::WHITE);
 		}
 
@@ -139,11 +174,11 @@ public:
 		rk4Step(ray, d, rs);
 
 		// 2) convert back to cartesian x,y
-		ray.x = ray.r * cos(ray.phi);
-		ray.y = ray.r * sin(ray.phi);
+		ray.Position.x = ray.r * cos(ray.phi);
+		ray.Position.y = ray.r * sin(ray.phi);
 
 		// 3) record the trail
-		ray.trail.push_back({ float(ray.x), float(ray.y) });
+		ray.trail.push_back(ray.Position);
 	}
 
 
@@ -241,7 +276,7 @@ public:
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
 			for (auto& ray : rays) {
-				RayStep(ray, 1.0f, SagittariusA.dr_s);
+				RayStep(ray, 1.0f, SagittariusA.r_s);
 				DrawRays(rays);
 			}
 
