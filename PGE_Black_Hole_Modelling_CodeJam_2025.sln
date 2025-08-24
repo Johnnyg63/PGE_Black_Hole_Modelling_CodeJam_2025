@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36408.4 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PGE_Black_Hole_Modelling_CodeJam_2025", "PGE_Black_Hole_Modelling_CodeJam_2025.vcxproj", "{764BF2EE-A1A6-4939-84A4-02A744503931}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{764BF2EE-A1A6-4939-84A4-02A744503931}.Debug|x64.ActiveCfg = Debug|x64
+		{764BF2EE-A1A6-4939-84A4-02A744503931}.Debug|x64.Build.0 = Debug|x64
+		{764BF2EE-A1A6-4939-84A4-02A744503931}.Debug|x86.ActiveCfg = Debug|Win32
+		{764BF2EE-A1A6-4939-84A4-02A744503931}.Debug|x86.Build.0 = Debug|Win32
+		{764BF2EE-A1A6-4939-84A4-02A744503931}.Release|x64.ActiveCfg = Release|x64
+		{764BF2EE-A1A6-4939-84A4-02A744503931}.Release|x64.Build.0 = Release|x64
+		{764BF2EE-A1A6-4939-84A4-02A744503931}.Release|x86.ActiveCfg = Release|Win32
+		{764BF2EE-A1A6-4939-84A4-02A744503931}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5A3DCA25-F9D0-4034-A9E0-B961495002E0}
+	EndGlobalSection
+EndGlobal
