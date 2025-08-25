@@ -133,6 +133,8 @@ public:
 	olc::vf2d vf2MessPos = { 10.0f, 10.0f };
 	/* END Screen Messages */
 
+	olc::vi2d centreScreenPos;
+
 public:
 	// Black hole structure
 	struct PGEBlackHole
@@ -302,10 +304,184 @@ public:
 		ray.dphi += (d / 6.0) * (k1[3] + 2 * k2[3] + 2 * k3[3] + k4[3]);
 	}
 
+public:
 
+	// Load any 3D objects here
 	void Load3DObjects()
 	{
 		// Load any 3D objects here
+		matWorld.identity();
+		matView.identity();
+
+		auto t = olc::utils::hw3d::LoadObj("assets/objectfiles/mountains.obj");
+		if (t.has_value())
+		{
+			meshSpaceGrid = *t;
+		}
+		
+		// Create required matrices
+		matSphere = olc::utils::hw3d::CreateSphere(); // Default sphere
+		matSkyCube = olc::utils::hw3d::CreateCube(olc::utils::hw3d::LEFT_CROSS_TEXTURE_RECT_MAP); // Default SkyCube
+
+
+		// Load any textures here
+		renSkyCube.Load("assets/images/spacetexture.png");
+
+	}
+
+	/*
+	* Updates the cam position by user input
+	* Mouse/Touch/Keyboard
+	*/
+	void UpdateCamByUserInput(float fElapsedTime)
+	{
+		// Handle Camera
+		// Touch zeros (single touch) handles Camera look direction
+		if (GetMouse(0).bHeld)
+		{
+
+			// We know the Right Center point we need to compare our positions
+			// Looking Right
+			if ((float)GetMousePos().x > (((float)centreScreenPos.x / 100) * 130))
+			{
+				fTheta -= fThetaRoC * fElapsedTime;
+
+
+			}
+
+			// Looking Left
+			if ((float)GetMousePos().x < (((float)centreScreenPos.x / 100) * 70))
+			{
+				fTheta += fThetaRoC * fElapsedTime;
+
+
+			}
+
+			// Looking Up
+			if ((float)GetMousePos().y < (((float)centreScreenPos.y / 100) * 70))
+			{
+				fYaw -= fYawRoC * fElapsedTime;
+				if (fYaw < -1.0f) fYaw = -1.0f;
+			}
+
+			// Looking Down
+			if ((float)GetMousePos().y > (((float)centreScreenPos.y / 100) * 130))
+			{
+				fYaw += fYawRoC * fElapsedTime;
+				if (fYaw > 1.0f) fYaw = 1.0f;
+			}
+
+		}
+		else
+		{
+			// Move the camera back to center, stops the dizzies!
+			if (fYaw > -0.01f && fYaw < 0.01f)
+			{
+				fYaw = 0.0f;
+			}
+			if (fYaw >= 0.01)
+			{
+				fYaw -= fYawRoC * fElapsedTime;
+
+			}
+			if (fYaw <= -0.01)
+			{
+				fYaw += fYawRoC * fElapsedTime;
+
+			}
+
+		}
+
+		// Handle movement
+		// Moving Forward
+		if (GetKey(olc::Key::UP).bHeld || GetMouse(1).bHeld)
+		{
+			vf3dCamera += vf3dForward;
+		}
+
+		// Moving Backward
+		if (GetKey(olc::Key::DOWN).bHeld)
+		{
+			vf3dCamera -= vf3dForward;
+		}
+
+		// Moving Left (Strife)
+		if (GetKey(olc::Key::LEFT).bHeld)
+		{
+			vf3dCamera.x -= cos(fTheta) * fStrifeRoC * fElapsedTime;
+			vf3dCamera.z -= sin(fTheta) * fStrifeRoC * fElapsedTime;
+		}
+
+
+		// Moving Right (Strife)
+		if (GetKey(olc::Key::RIGHT).bHeld)
+		{
+			vf3dCamera.x += cos(fTheta) * fStrifeRoC * fElapsedTime;
+			vf3dCamera.z += sin(fTheta) * fStrifeRoC * fElapsedTime;
+
+		}
+
+
+		// Moving UP
+		if (GetKey(olc::Key::SPACE).bHeld)
+		{
+			fJump += fJumpRoC * fElapsedTime;
+			vf3dCamera.y = fJump;
+		}
+		else if (GetKey(olc::Key::B).bHeld)
+		{
+			fJump -= fJumpRoC * fElapsedTime;
+			vf3dCamera.y = fJump;
+
+		}
+		else
+		{
+			/* if (fJump > (vf3dOffset.y - 0.01f) && fJump < (vf3dOffset.y + 0.01f))
+			 {
+				 fJump = vf3dOffset.y;
+				 vf3dCamera.y = fJump;
+			 }
+			 if (fJump >= (vf3dOffset.y + 0.01))
+			 {
+				 fJump -= 4.0f * fElapsedTime;
+				 vf3dCamera.y = fJump;
+			 }
+			 if (fJump <= (vf3dOffset.y - 0.01))
+			 {
+				 fJump += 4.0f * fElapsedTime;
+				 vf3dCamera.y = fJump;
+			 }*/
+		}
+
+	}
+
+	/*
+	* Displays messages on the screen
+	*/
+	void DisplayMessages()
+	{
+		nFrameCount = GetFPS();
+
+		std::string sMessage = "OneLoneCoder.com";
+		vecMessages.push_back(sMessage);
+
+		sMessage = sAppName + " - FPS: " + std::to_string(nFrameCount);
+		vecMessages.push_back(sMessage);
+
+
+		sMessage = "---";
+		vecMessages.push_back(sMessage);
+
+		fStep = 10;
+		vf2MessPos.y = fStep;
+		for (auto& s : vecMessages)
+		{
+			DrawStringDecal(vf2MessPos, s);
+			vf2MessPos.y += fStep;
+		}
+		vecMessages.clear();
+
+
 	}
 
 public:
@@ -315,6 +491,27 @@ public:
 		// Setup up worldview parameters
 		WorldWidth = double((ScreenWidth() * 2.0) / dKMtoMeters)* dScreenMToWorldVM;	// Width of the WorldView in meters
 		WorldHeight = double((ScreenHeight() * 2.0) / dKMtoMeters) * dScreenMToWorldVM;	// Height of the WorldView in meters
+
+		// Setup 3D Camera
+		float fAspect = float(GetScreenSize().x) / float(GetScreenSize().y); // Width / height 
+		float S = 1.0f / (tan(3.14159f * 0.25f));
+		float f = 1000.0f;
+		float n = 0.1f;
+
+		Cam3D.SetScreenSize(GetScreenSize());
+		Cam3D.SetClippingPlanes(n, f);
+		Cam3D.SetFieldOfView(S);
+
+		centreScreenPos = GetScreenSize();
+		centreScreenPos.x = centreScreenPos.x / 2;
+		centreScreenPos.y = centreScreenPos.y / 2;
+
+		// Load 3D objects
+		Load3DObjects();
+
+		// Load any sprites, decals or renderables here
+		//renOLCPGEMobLogo.Load("assets/images/olcpgemob.png");
+		
 
 		/*
 			Sagittarius A*, the supermassive black hole at the center of our Milky Way galaxy, and has an estimated mass of approximately 4.154 million solar masses.
@@ -361,7 +558,9 @@ public:
 		{
 			return false;
 		}
-			
+		
+		// Display Messages
+		DisplayMessages();
 
 		return true;
 	}
