@@ -48,13 +48,90 @@ class PGEBlackHoleDemo : public olc::PixelGameEngine
 {
 
 public:
-	olc::SplashScreen olcSplashScreen;
+	// olc::SplashScreen olcSplashScreen; TODO add a splash screen
 
 	// In Example's constructor, initialize PBH_SagittariusA after the class definition
 	PGEBlackHoleDemo() {
 		sAppName = "PGE Black Hole Modelling CodeJam2025";
 
 	}
+
+public:
+	// 3D Stuff
+
+	/* Matrices */
+	olc::mf4d matWorld;		// World Matrix
+	olc::mf4d matView;		// View Matrix
+	olc::mf4d matCube;		// Cube Matrix
+	olc::mf4d mSkyCube;		// Sky Cube Matrix
+	olc::mf4d matMSphere;	// Matrix for Sphere (black hole, Sun, Stars etc)
+	olc::mf4d matProject;	// Projection Matrix
+
+	/* Meshes */
+	olc::utils::hw3d::mesh meshSpaceGrid;	// Space Grid Mesh
+	olc::utils::hw3d::mesh matSanityCube;	// Sanity Cube Mesh
+	olc::utils::hw3d::mesh matSkyCube;		// Sky Cube Mesh
+	olc::utils::hw3d::mesh matSphere;		// Sphere Mesh (black hole, Sun, Stars etc)
+
+	// Camera vectors
+	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
+	olc::vf3d vf3dCamera = { 5.0f, 5.0f, 40.0f };    // vf3d camera direction
+	olc::vf3d vf3dLookDir = { 0.0f, 0.0f, 1.0f };    // vf3d look direction
+	olc::vf3d vf3dForward = { 0.0f, 0.0f, 0.0f };    // vf3d Forward direction
+	olc::vf3d vf3dOffset = { 5.0f, 5.0f, 40.0f };    // vf3d Offset
+
+	// Camera angles
+	float fYaw = 0.0f;		    // FPS Camera rotation in X plane
+	float fYawRoC = 1.0f;	    // fYaw Rate of Change Look Up/Down 
+	float fTheta = 0.0f;	    // Spins World transform
+	float fThetaRoC = 1.5f;	    // fTheta Rate of Change Spin Left/Right
+	float fStrifeRoC = 8.5f;    // Strife Rate of Change, thanks: #Boguslavv
+	float fForwardRoC = 8.0f;   // Forward/Backwards Rate of Change
+	float fJump = vf3dOffset.y;	// Monitors jump height so we can land again
+	float fJumpRoC = 4.0f;		// fTheta Rate of Change
+
+	// 3D Camera
+	olc::utils::hw3d::Camera3D Cam3D;
+
+	// Object vertors, locations and scales
+	olc::vf3d vf3dSkyCubeScale = { 600.0f, 600.0f, 600.0f };    // vf3d SkyCube Scale (in sort its Size)
+	olc::vf3d vf3dSkyCubeLocation = { 0.0f, 0.0f, 0.0f };		// vf3d SkyCube Location 
+	olc::vf3d vf3dSkyCubeOffset = { -200.0f, -300.0f, -200.0f };// vf3d SkyCube Offset
+
+	olc::vf3d vf3dBlackHoleScale = { 10.0f, 10.0f, 10.0f };		// vf3d Black hole Scale (in sort its Size)
+	olc::vf3d vf3dBlackHoleLocation = { 10.0f, 0.0f, 0.0f };	// vf3d Black hole Location 
+	olc::vf3d vf3dBlackHoleOffset = { 0.0f, 0.0f, 0.0f };		// vf3d black hole Offset
+
+	// Sphere default properties
+	float fSphereRoC = 0.5f;    // Sphere Rate of Change
+	float fSphereRotaotionY = -1.57079633; // Sphere start Y rotation position
+
+public:
+	// Other stuff
+
+	/* Sprites */
+	/* END Sprites*/
+
+	/* Decals */
+	/* End Decals */
+
+	/* Renderables */
+	olc::Renderable renOLCPGEMobLogo;	// OLC PGE Mob Logo Renderable
+	olc::Renderable renCube;			// Sanity Cube Renderable 
+	olc::Renderable renBlackHole;		// Black Hole Renderable
+	olc::Renderable renStar;			// Star Renderable
+	olc::Renderable renSkyCube;			// Sky Cube Renderable
+	/* End Reneders */
+
+	/* Vectors */
+	std::vector<std::string> vecMessages;
+	/* END Vectors*/
+
+	/* Screen Messages */
+	uint32_t nFrameCount = 0;
+	float fStep = 20;
+	olc::vf2d vf2MessPos = { 10.0f, 10.0f };
+	/* END Screen Messages */
 
 public:
 	// Black hole structure
@@ -107,7 +184,6 @@ public:
 		}
 	};
 	
-
 	std::vector<Ray> rays;
 
 	PGEBlackHole SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass); // Sagittarius A* black hole
@@ -160,7 +236,7 @@ public:
 		ray.trail.push_back(ray.Position);
 	}
 
-
+public:
 	// Some functions to help with the physics
 
 	/*
@@ -227,7 +303,10 @@ public:
 	}
 
 
-
+	void Load3DObjects()
+	{
+		// Load any 3D objects here
+	}
 
 public:
 	bool OnUserCreate() override
@@ -250,6 +329,8 @@ public:
 		SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass);
 
 		rays.push_back(Ray(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
+
+		// Create the Black Hole Sphere
 
 		return true;
 	}

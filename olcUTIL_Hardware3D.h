@@ -95,6 +95,11 @@
 #include <numbers>
 #include <optional>
 #include <sstream>
+#define _USE_MATH_DEFINES 
+#include <cmath>							
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif // M_PI
 
 #if !defined(OLC_VECTOR3D_DEFINED)
 namespace olc
@@ -712,6 +717,35 @@ namespace olc::utils::hw3d
 		olc::DecalStructure layout = olc::DecalStructure::LIST;
 	};
 
+	// John Galvin: 
+	/*
+	* Texture type for spheres only
+	*/
+	enum SPHERE_TEXTURE_TYPE {
+
+		SOLID_TEXTURE = 0,
+		TOP_DOWN_VIEW,
+		TEXTURE_MAP
+
+	} SphereTextureType;
+
+	/*
+	* Texture type for SkyCub only
+	*/
+	enum CUBE_TEXTURE_TYPE {
+
+		TEXTURE = 0,
+		LEFT_CROSS_TEXTURE_CUBE_MAP,
+		LEFT_CROSS_TEXTURE_RECT_MAP,
+		VERT_TEXTURE_MAP,
+		HORZ_TEXTURE_MAP
+
+
+	} SkyCubeTextureType;
+
+
+	// End John Galvin
+
 
 	inline olc::utils::hw3d::mesh CreateSanityCube()
 	{
@@ -1064,6 +1098,698 @@ namespace olc::utils::hw3d
 	}
 
 
+	// John Galvin
+
+		/*
+		* Creates the all glorious triangle
+		*/
+	olc::utils::hw3d::mesh CreateTriangle()
+	{
+		olc::utils::hw3d::mesh m;
+
+		// Lower left corner
+		m.pos.push_back({ 0.0f, -0.5f * float(sqrt(3)) / 3, 0.0f }); m.norm.push_back({ 0, 0, 0, 0 }); m.uv.push_back({ 0, 0 }); m.col.push_back(olc::WHITE);
+
+		// Lower right corner
+		m.pos.push_back({ 0.0f, 0.5f * float(sqrt(3)) / 3, 0.0f }); m.norm.push_back({ 0, 0, 0, 0 }); m.uv.push_back({ 0, 0 }); m.col.push_back(olc::WHITE);
+
+		// Upper Right corner
+		m.pos.push_back({ 0.5f, 0.0f * float(sqrt(3)) * 2 / 3, 0.0f }); m.norm.push_back({ 0, 0, 0, 0 }); m.uv.push_back({ 0, 0 }); m.col.push_back(olc::WHITE);
+
+		return m;
+
+
+	}
+
+	/*
+	* Creates a 3 Sided Pyramid
+	*/
+	olc::utils::hw3d::mesh Create3SidedPyramid()
+	{
+		olc::utils::hw3d::mesh m;
+
+		auto meshPushBack = [&](vf3d pos, vf2d textCoord, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
+				m.uv.push_back({ textCoord.x, textCoord.y });					// TexCoord
+				m.col.push_back(col);											// COLOURS
+			};
+
+		// Face 1 
+		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::GREY);	// Position 0 (Top Point)
+		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, olc::GREY);	// Position 1
+		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, olc::GREY);	// Position 2
+
+		// Face 2
+		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::YELLOW);	// Position 0 ( Top Point)
+		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, olc::YELLOW);	// Position 2
+		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::YELLOW);	// Position 3
+
+		// Face 3
+		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::RED);	// Position 0 ( Top Point)
+		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, olc::RED);	// Position 1
+		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::RED);	// Position 3
+
+		// Face 4
+		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, olc::GREEN);	// Position 1
+		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, olc::GREEN); // Position 2
+		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::GREEN); // Position 3
+
+
+		return m;
+	}
+
+	/*
+	* Creates a Square Pyramind
+	*/
+	olc::utils::hw3d::mesh Create4SidedPyramid(SPHERE_TEXTURE_TYPE SphereTextureType = SPHERE_TEXTURE_TYPE::SOLID_TEXTURE)
+	{
+		olc::utils::hw3d::mesh m;
+
+		vf3d vf3dPosition = { 0.0f, 0.0f, 0.0f };
+		switch (SphereTextureType)
+		{
+		case SOLID_TEXTURE:
+		{
+			// Buttom Face, 2 Triangles
+			m.uv.push_back({ 0.0f, 0.0f });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f }); // Position 2
+			m.uv.push_back({ 1.0f, 1.0f }); // Position 3
+
+			m.uv.push_back({ 0.0f, 0.0f }); // Position 1
+			m.uv.push_back({ 1.0f, 1.0f }); // Position 3
+			m.uv.push_back({ 0.0f, 1.0f }); // Position 4
+
+			// Face 1
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 0.5, 0.5 });	// Position 5 (Top Point)
+
+			// Face 2
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 0.5, 0.5 });	// Position 5 (Top Point)
+
+			// Face 3
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 0.5, 0.5 });	// Position 5 (Top Point)
+
+			// Face 4
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 0.5, 0.5 });	// Position 5 (Top Point)
+			break;
+		}
+		case TOP_DOWN_VIEW:
+		{
+			// Buttom Face, 2 Triangles
+			m.uv.push_back({ 0.0f, 0.0f });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f }); // Position 2
+			m.uv.push_back({ 1.0f, 1.0f }); // Position 3
+
+			m.uv.push_back({ 0.0f, 0.0f }); // Position 1
+			m.uv.push_back({ 1.0f, 1.0f }); // Position 3
+			m.uv.push_back({ 0.0f, 1.0f }); // Position 4
+
+			// Face 1
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 0.5, 0.5 });	// Position 5 (Top Point)
+
+			// Face 2
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 1.0f, 1.0f });	// Position 3
+			m.uv.push_back({ 0.5f, 0.5f }); // Position 5 (Top Point)
+
+			// Face 3
+			m.uv.push_back({ 1.0f, 1.0f });	// Position 3
+			m.uv.push_back({ 0.0f, 1.0f });	// Position 4
+			m.uv.push_back({ 0.5f, 0.5f }); // Position 5 (Top Point)
+
+			// Face 4
+			m.uv.push_back({ 0.0f, 1.0f });	// Position 4
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 0.5f, 0.5f }); // Position 5 (Top Point)
+
+			break;
+		}
+		case TEXTURE_MAP:
+		default:
+		{
+			// Buttom Face, 2 Triangles
+			m.uv.push_back({ 0.34f, 0.333333f });	// Position 1
+			m.uv.push_back({ 0.666666f, 0.333333f });	// Position 2
+			m.uv.push_back({ 0.666666f, 0.666666f });	// Position 3
+
+			m.uv.push_back({ 0.333333f, 0.333333f });	// Position 1
+			m.uv.push_back({ 0.666666f, 0.666666f });	// Position 3
+			m.uv.push_back({ 0.333333f, 0.666666f });	// Position 4
+
+			// Face 1
+			m.uv.push_back({ 0.333333f, 0.333333f });	// Position 1
+			m.uv.push_back({ 0.666666f, 0.333333f });	// Position 2
+			m.uv.push_back({ 0.5f, 0.0f });		// Position
+
+			// Face 2
+			m.uv.push_back({ 0.666666f, 0.333333f });	// Position 2
+			m.uv.push_back({ 0.666666f, 0.666666f });	// Position 3
+			m.uv.push_back({ 1.0f, 0.5f });		// Position		
+
+			// Face 3
+			m.uv.push_back({ 0.666666f, 0.666666f });	// Position 3
+			m.uv.push_back({ 0.333333f, 0.666666f });	// Position 4
+			m.uv.push_back({ 0.5f, 1.0f });		// Position 
+
+			// Face 4
+			m.uv.push_back({ 0.333333f, 0.666666f });	// Position 4
+			m.uv.push_back({ 0.333333f, 0.333333f });	// Position 1
+			m.uv.push_back({ 0.0f, 0.5f }); // Position 5 (Top Point)
+			break;
+		}
+		}
+
+		auto meshPushBack = [&](vf3d pos, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z }); m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 }); m.col.push_back(col);
+			};
+
+		//Buttom Face has 4 sides therefore 2 trianges (White and Green)
+		meshPushBack({ 0.0f, 0.0f, 0.5f });		// Position 1	
+		meshPushBack({ 0.5f, 0.0f, 0.5f });		// Position 2
+		meshPushBack({ 0.5f, 0.0f, 0.0f });		// Position 3
+
+		meshPushBack({ 0.0f, 0.0f, 0.5f }); 	// Position 1
+		meshPushBack({ 0.5f, 0.0f, 0.0f }); 	// Position 3
+		meshPushBack({ 0.0f, 0.0f, 0.0f });		// Position 4
+
+		// Face 1 
+		meshPushBack({ 0.0f, 0.0f, 0.5f });		// Position 1
+		meshPushBack({ 0.5f, 0.0f, 0.5f }); 	// Position 2
+		meshPushBack({ 0.25f, 0.25f, 0.25f });	// Position 5 (Top Point)
+
+		// Face 2
+		meshPushBack({ 0.5f, 0.0f, 0.5f }); 	// Position 2
+		meshPushBack({ 0.5f, 0.0f, 0.0f });		// Position 3
+		meshPushBack({ 0.25f, 0.25f, 0.25f }); 	// Position 5 (Top Point)
+
+		// Face 3
+		meshPushBack({ 0.5f, 0.0f, 0.0f }); 	// Position 3
+		meshPushBack({ 0.0f, 0.0f, 0.0f }); 	// Position 4
+		meshPushBack({ 0.25f, 0.25f, 0.25f }); 	// Position 5 (Top Point)
+
+		// Face 4
+		meshPushBack({ 0.0f, 0.0f, 0.0f }); 	// Position 4
+		meshPushBack({ 0.0f, 0.0f, 0.5f });		// Position 1
+		meshPushBack({ 0.25f, 0.25f, 0.25f });	// Position 5 (Top Point)
+
+
+		return m;
+	}
+
+	/*
+	* Creates a Sphere
+	* fRadius : in Mesh unit size,
+	* nLatitudeCount : Latitude number of rings
+	* nLatitudeCount : nLongitudeCount number of rings
+	*/
+	olc::utils::hw3d::mesh CreateSphere(float fRadius = 0.5, int32_t nLatitudeCount = 50, int32_t nLongitudeCount = 50)
+	{
+		olc::utils::hw3d::mesh m;
+
+		olc::utils::hw3d::mesh mTemp; // Temp mesh use to calcuate the points, texture and colours
+
+		float fTheta = 0.0f;
+		float sinTheta = 0.0f;
+		float cosTheta = 0.0f;
+		float fHorAngle = 0.0f;
+		float sinHorAngle = 0.0f;
+		float cosHorAngle = 0.0f;
+		float x, y, z, v, u;
+		olc::vf3d vf3dPosition;
+
+		for (int32_t i = 0; i <= nLatitudeCount; i++)
+		{
+			v = 1 - float(i) / float(nLatitudeCount);	// Get the V TextCoord for UV
+			fTheta = i * M_PI / nLatitudeCount;			// Verical Angle
+			sinTheta = sin(fTheta);
+			cosTheta = cos(fTheta);
+
+			for (int32_t j = 0; j <= nLongitudeCount; j++)
+			{
+				u = 1 - float(j) / float(nLatitudeCount); // Get the u TextCoord for UV
+
+				fHorAngle = j * 2 * M_PI / nLongitudeCount; // Horizontal angle
+				sinHorAngle = sin(fHorAngle);
+				cosHorAngle = cos(fHorAngle);
+
+				vf3dPosition.x = fRadius * cosHorAngle * sinTheta;
+				vf3dPosition.y = fRadius * cosTheta;
+				vf3dPosition.z = fRadius * sinHorAngle * sinTheta;
+
+				mTemp.pos.push_back({ vf3dPosition.x, vf3dPosition.y, vf3dPosition.z });	// Position
+				mTemp.uv.push_back({ u, v });												// Texture Coords
+				mTemp.col.push_back(olc::WHITE);											// Colours
+
+			}
+		}
+
+		// As the engine currently does not support indices we need to calculate the trianges (faces)
+		// To do this we will work out the indices, then push back the indice mTemp vector into our output mesh (m) vectors
+		// Hence in the end we will have all the face locations in blocks of 3 in output mesh (m)
+
+		// This code is modified version from the Microsoft DirectX tutorial 
+		// https://github.com/microsoft/DirectXTK/wiki
+
+		auto meshPushBack = [&](vf3d pos, vf2d textCoord, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
+				m.uv.push_back({ textCoord.x, textCoord.y });					// TexCoord
+				m.col.push_back(col);											// COLOURS
+			};
+
+
+
+		const size_t stride = nLongitudeCount + 1;
+		const size_t mTempSize = mTemp.pos.size() - 1;
+
+		size_t pos0, pos1, pos2, pos3, nextY, nextX;
+
+		for (size_t y = 0; y < nLatitudeCount; y++)
+		{
+			for (size_t x = 0; x <= nLongitudeCount; x++)
+			{
+				nextY = y + 1;
+				nextX = (x + 1) % stride;
+
+				// point = y * stride + x
+				pos0 = y * stride + x;
+				pos1 = nextY * stride + x;
+				pos2 = y * stride + nextX;
+				pos3 = nextY * stride + nextX;
+
+				// Face 1
+
+				// Position 0
+				meshPushBack
+				(
+					{ mTemp.pos[pos0][0], mTemp.pos[pos0][1], mTemp.pos[pos0][2] },
+					{ mTemp.uv[pos0][0], mTemp.uv[pos0][1] },
+					mTemp.col[pos0]
+				);
+
+				// Position 1
+				meshPushBack
+				(
+					{ mTemp.pos[pos1][0], mTemp.pos[pos1][1], mTemp.pos[pos1][2] },
+					{ mTemp.uv[pos1][0], mTemp.uv[pos1][1] },
+					mTemp.col[pos1]
+				);
+
+				// Position 2
+				meshPushBack
+				(
+					{ mTemp.pos[pos2][0], mTemp.pos[pos2][1], mTemp.pos[pos2][2] },
+					{ mTemp.uv[pos2][0], mTemp.uv[pos2][1] },
+					mTemp.col[pos2]
+				);
+
+				// Face 2
+
+				// Position 1
+				meshPushBack
+				(
+					{ mTemp.pos[pos1][0], mTemp.pos[pos1][1], mTemp.pos[pos1][2] },
+					{ mTemp.uv[pos1][0], mTemp.uv[pos1][1] },
+					mTemp.col[pos1]
+				);
+
+				// Position 2
+				meshPushBack
+				(
+					{ mTemp.pos[pos2][0], mTemp.pos[pos2][1], mTemp.pos[pos2][2] },
+					{ mTemp.uv[pos2][0], mTemp.uv[pos2][1] },
+					mTemp.col[pos2]
+				);
+
+				// position 3
+				meshPushBack
+				(
+					{ mTemp.pos[pos3][0], mTemp.pos[pos3][1], mTemp.pos[pos3][2] },
+					{ mTemp.uv[pos3][0], mTemp.uv[pos3][1] },
+					mTemp.col[pos3]
+				);
+
+
+			}
+		}
+
+		// finally clean up
+		mTemp.col.clear();
+		mTemp.norm.clear();
+		mTemp.pos.clear();
+		mTemp.uv.clear();
+		return m;
+	}
+
+	/*
+	* Creates a Cube and sets the texcoord depending on the texture map image
+	* CUBE_TEXTURE_TYPE : SOLID_TEXTURE, LEFT_CROSS_TEXTURE_CUBE_MAP, LEFT_CROSS_TEXTURE_RECT_MAP, VERT_TEXTURE_MAP, HORZ_TEXTURE_MAP
+	*/
+	olc::utils::hw3d::mesh CreateCube(CUBE_TEXTURE_TYPE CubeTextureType = CUBE_TEXTURE_TYPE::LEFT_CROSS_TEXTURE_CUBE_MAP)
+	{
+		olc::utils::hw3d::mesh m;
+
+		//   Coordinates
+		//        5--------6
+		//       /|       /|
+		//      1--------2 |
+		//      | |      | |
+		//      | 4------|-7
+		//      |/       |/
+		//      0--------3
+
+
+		auto meshPushBack = [&](vf3d pos, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z });
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });
+				m.col.push_back(col);
+			};
+
+
+		// 1: Lets see what we are dealing with
+
+		switch (CubeTextureType)
+		{
+
+		case CUBE_TEXTURE_TYPE::LEFT_CROSS_TEXTURE_CUBE_MAP:
+		{
+			/*
+			* Notes for a Cube Map we just use Javidx9 implementation as is it simply brilliant!
+			*
+			*  __________
+			* |   **     |
+			* | ******** |
+			* |   **     |
+			* |       ~~ |
+			*  ----------
+			*/
+
+			m = CreateSanityCube();
+			return m;
+			break;
+		}
+		case CUBE_TEXTURE_TYPE::LEFT_CROSS_TEXTURE_RECT_MAP:
+		{
+			/*
+			* Notes for a Rect Map the x value never changes, just the y
+			*
+			*  __________
+			* |   **     |
+			* | ******** |
+			* |   **     |
+			*  ----------
+			*/
+
+			// South
+			m.uv.push_back({ 0.25, 0.66666f });
+			m.uv.push_back({ 0.5, 0.66666f });
+			m.uv.push_back({ 0.5, 0.33333f });
+			m.uv.push_back({ 0.25, 0.66666f });
+			m.uv.push_back({ 0.5, 0.33333f });
+			m.uv.push_back({ 0.25, 0.33333f });
+
+			// East
+			m.uv.push_back({ 0.5, 0.66666f });
+			m.uv.push_back({ 0.75, 0.66666f });
+			m.uv.push_back({ 0.75, 0.33333f });
+			m.uv.push_back({ 0.5, 0.66666f });
+			m.uv.push_back({ 0.75, 0.33333f });
+			m.uv.push_back({ 0.5, 0.33333f });
+
+			// North
+			m.uv.push_back({ 0.75, 0.66666f });
+			m.uv.push_back({ 1.0, 0.66666f });
+			m.uv.push_back({ 1.0, 0.33333f });
+			m.uv.push_back({ 0.75, 0.66666f });
+			m.uv.push_back({ 1.0, 0.33333f });
+			m.uv.push_back({ 0.75, 0.33333f });
+
+			// West
+			m.uv.push_back({ 0.0, 0.66666f });
+			m.uv.push_back({ 0.25, 0.66666f });
+			m.uv.push_back({ 0.25, 0.33333f });
+			m.uv.push_back({ 0.0, 0.66666f });
+			m.uv.push_back({ 0.25, 0.33333f });
+			m.uv.push_back({ 0.0, 0.33333f });
+
+			// Top
+			m.uv.push_back({ 0.25, 0.33333f });
+			m.uv.push_back({ 0.5, 0.33333f });
+			m.uv.push_back({ 0.5, 0.0 });
+			m.uv.push_back({ 0.25, 0.33333f });
+			m.uv.push_back({ 0.5, 0.0 });
+			m.uv.push_back({ 0.25, 0.0 });
+
+			// Bottom
+			m.uv.push_back({ 0.25, 1.0f });
+			m.uv.push_back({ 0.5, 1.0f });
+			m.uv.push_back({ 0.5, 0.66666f });
+			m.uv.push_back({ 0.25, 1.0f });
+			m.uv.push_back({ 0.5, 0.66666f });
+			m.uv.push_back({ 0.25, 0.66666f });
+
+			break;
+		}
+		case CUBE_TEXTURE_TYPE::VERT_TEXTURE_MAP:
+		{
+			/*
+			* Note: for a vertical texture, x remains the same, y increase
+			*
+			*  __
+			* |**|
+			* |**|
+			* |**|
+			* |**|
+			* |**|
+			* |**|
+			*  --
+			*/
+
+			float y = 1 / 6;
+			for (int8_t i = 0; i < 5; i++)
+			{
+				float fY = y * i;
+				m.uv.push_back({ 0.0f,	fY });		// Position 1
+				m.uv.push_back({ 1.0f,	fY });		// Position 2
+				m.uv.push_back({ 0.0,	fY + y });	// Position 3
+				m.uv.push_back({ 1.0f,	fY });		// Position 2
+				m.uv.push_back({ 0.0,	fY + y });	// Position 3
+				m.uv.push_back({ 1.0f,	fY + y });	// Position 4
+
+			}
+			break;
+		}
+		case CUBE_TEXTURE_TYPE::HORZ_TEXTURE_MAP:
+		{
+
+			/*
+			* Note: for a horz texture, y remains the same, x increase
+			*
+			*  __________________
+			* | **|**|**|**|**|**|
+			*  ------------------
+			*/
+
+			float x = 1 / 6;
+			for (int8_t i = 0; i < 5; i++)
+			{
+				float fX = x * i;
+
+				m.uv.push_back({ fX,		0.0f });	// Position 1
+				m.uv.push_back({ fX + x,	0.0 });		// Position 2
+				m.uv.push_back({ fX,		1.0f });	// Position 3
+				m.uv.push_back({ fX + x,	0.0 });		// Position 2
+				m.uv.push_back({ fX,		1.0f });	// Position 3
+				m.uv.push_back({ fX + x,	1.0f });	// Position 4
+
+			}
+			break;
+		}
+		case CUBE_TEXTURE_TYPE::TEXTURE:
+		default:
+		{
+			// For a solid texture, South, East, North, West, Top and Bottom all have the same Text Coords
+			for (int8_t i = 0; i < 6; i++)
+			{
+				m.uv.push_back({ 0.0f, 0.0f }); // Position 1
+				m.uv.push_back({ 1.0f, 0.0 });	// Position 2
+				m.uv.push_back({ 0.0, 1.0 });	// Position 3
+				m.uv.push_back({ 1.0f, 0.0 });	// Position 2
+				m.uv.push_back({ 0.0, 1.0 });	// Position 3
+				m.uv.push_back({ 1.0f, 1.0f }); // Position 4
+			}
+
+			break;
+		}
+
+		}
+
+
+		// South
+		meshPushBack({ 0,0,0 });
+		meshPushBack({ 1,0,0 });
+		meshPushBack({ 1,1,0 });
+		meshPushBack({ 0,0,0 });
+		meshPushBack({ 1,1,0 });
+		meshPushBack({ 0,1,0 });
+
+		// East
+		meshPushBack({ 1,0,0 });
+		meshPushBack({ 1,0,1 });
+		meshPushBack({ 1,1,1 });
+		meshPushBack({ 1,0,0 });
+		meshPushBack({ 1,1,1 });
+		meshPushBack({ 1,1,0 });
+
+		// North
+		meshPushBack({ 1,0,1 });
+		meshPushBack({ 0,0,1 });
+		meshPushBack({ 0,1,1 });
+		meshPushBack({ 1,0,1 });
+		meshPushBack({ 0,1,1 });
+		meshPushBack({ 1,1,1 });
+
+		// West
+		meshPushBack({ 0,0,1 });
+		meshPushBack({ 0,0,0 });
+		meshPushBack({ 0,1,0 });
+		meshPushBack({ 0,0,1 });
+		meshPushBack({ 0,1,0 });
+		meshPushBack({ 0,1,1 });
+
+		// Top
+		meshPushBack({ 0,1,0 });
+		meshPushBack({ 1,1,0 });
+		meshPushBack({ 1,1,1 });
+		meshPushBack({ 0,1,0 });
+		meshPushBack({ 1,1,1 });
+		meshPushBack({ 0,1,1 });
+
+		// Bottom
+		meshPushBack({ 0,0,1 });
+		meshPushBack({ 1,0,1 });
+		meshPushBack({ 1,0,0 });
+		meshPushBack({ 0,0,1 });
+		meshPushBack({ 1,0,0 });
+		meshPushBack({ 0,0,0 });
+
+
+		return m;
+	}
+
+
+	/*
+	* Creates the HW3D Skycube mesh to be used with HW3D_DrawSkyCube method
+	* NOTE: This mesh has no texture coordinates, as HW3D_DrawSkyCube draws the mesh using the GPUSkyCubeTask
+	* The GPUSkyCubeTask requires use to provide the 6 sides of the cube in the olc::SkyCubeProperties
+	* The mesh coordinates are in Left Hand ONLY. (OpenGL GL_TEXTURE_CUBE_MAP (SkyCubes) are always Left Hand)
+	* The GPUSkyCubeTask will take care of the rest
+	*/
+	olc::utils::hw3d::mesh CreateHW3DSkyCube()
+	{
+		olc::utils::hw3d::mesh m;
+		olc::utils::hw3d::mesh mTemp; // Temp mesh use to calcuate the points, texture and colours
+
+
+		// Some Autos to help keep our code managable
+
+		// Pushs back pos to m mesh and auto calcuates the norms
+		auto meshPushBack = [&](vf3d pos, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
+				m.uv.push_back({ 0.0f, 0.0f });									// TexCoord
+				m.col.push_back(col);											// COLOURS
+			};
+
+		// Uses the past face triangle positions to create our output mesh
+		auto createOutPutMesh = [&](std::vector<int> vecPosition)
+			{
+				for (auto p : vecPosition)
+				{
+					meshPushBack({ mTemp.pos[p][0], mTemp.pos[p][1], mTemp.pos[p][2] });
+				}
+
+			};
+
+
+		//   Coordinates
+		//        7--------6
+		//       /|       /|
+		//      4--------5 |
+		//      | |      | |
+		//      | 3------|-2
+		//      |/       |/
+		//      0--------1
+		//
+
+
+		// Set up our temp mesh
+		mTemp.pos.push_back({ -1.0f, -1.0f, 1.0f });	// Position 0
+		mTemp.pos.push_back({ 1.0f, -1.0f, 1.0f });		// Position 1
+		mTemp.pos.push_back({ 1.0f, -1.0f, -1.0f });	// Position 2
+		mTemp.pos.push_back({ -1.0f, -1.0f, -1.0f });	// Position 3
+		mTemp.pos.push_back({ -1.0f, 1.0f, 1.0f });		// Position 4
+		mTemp.pos.push_back({ 1.0f, 1.0f, 1.0f });		// Position 5
+		mTemp.pos.push_back({ 1.0f, 1.0f, -1.0f });		// Position 6
+		mTemp.pos.push_back({ -1.0f, 1.0f, -1.0f });	// Position 7
+
+		// As the engine currently does not support indices we need to calculate the trianges (faces)
+		// To do this we will manaully set the triangles as per the indices map, 
+		// then push back the index mTemp vector into our output mesh (m) vectors
+		// Hence in the end we will have all the face locations in blocks of 3 in output mesh (m)
+
+
+		// ORDER IS IMPORTANT
+
+		// Right face
+		createOutPutMesh({ 1, 2, 6, 6, 5, 1 });
+
+		// Left Face
+		createOutPutMesh({ 0, 4, 7, 7, 3, 0 });
+
+		// Top Face
+		createOutPutMesh({ 4, 5, 6, 6, 7, 4 });
+
+		// Buttom Face
+		createOutPutMesh({ 0, 3, 2, 2, 1, 0 });
+
+		// Back Face
+		createOutPutMesh({ 0, 1, 5, 5, 4, 0 });
+
+		// Front Face
+		createOutPutMesh({ 3, 7, 6, 6, 2, 3 });
+
+		// finally some clean up
+		mTemp.pos.clear();
+
+
+		return m;
+
+	}
+
+
+
+	// End John Galvin
 
 	class Camera3D
 	{
