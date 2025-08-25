@@ -4,48 +4,54 @@
 #define OLC_IMAGE_STB
 #include "olcUTIL_Hardware3D.h"
 #include "olcPixelGameEngine.h"
-#include <immintrin.h>			// For AVX/SSE
+#include <immintrin.h>			
 #define _USE_MATH_DEFINES 
-#include <cmath>				// Maths lots of maths
-#include <vector>				// Vectors lots of vectors
+#include <cmath>				
+#include <vector>				
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif // M_PI
 
-double C = 299792458;			// Speed of light in m/s
-double G = 6.67430e-11;			// Gravitational constant
-double dAU = 1.496e+11;			// Astronomical Unit in meters
-double dPC = 3.086e+16;			// Parsec in meters
-double dLY = 9.461e+15;			// Light Year in meters
-double dSolarMass = 1.989e+30;	// Solar mass in kg
-double dEarthMass = 5.972e+24;	// Earth mass in kg
-double dEarthRadius = 6.371e+6; // Earth radius in meters
-double dSunMass = dSolarMass;	// Sun mass in kg (1 Solar mass = our sun mass :))
-double dSunRadius = 6.9634e+8;	// Sun radius in meters
-double dSagittariusAMass = 4.1e6 * dSolarMass; // Mass of Sagittarius A* in kg (approximately 4.154 million solar masses)
-double dArbitraryfactor = 2.5;	// Arbitrary factor for visualization of event horizon
+const double C = 2.99792458e+8;			// Speed of light in m/s
+const double G = 6.67430e-11;			// Gravitational constant
+const double dAU = 1.496e+11;			// Astronomical Unit in meters
+const double dPC = 3.086e+16;			// Parsec in meters
+const double dLY = 9.461e+15;			// Light Year in meters
+const double dSolarMass = 1.989e+30;	// Solar mass in kg
+const double dEarthMass = 5.972e+24;	// Earth mass in kg
+const double dEarthRadius = 6.371e+6;	// Earth radius in meters
+const double dSunMass = dSolarMass;		// Sun mass in kg (1 Solar mass = our sun mass :))
+const double dSunRadius = 6.9634e+8;	// Sun radius in meters
+const double dSagittariusAMass = 4.1e+6 * dSolarMass; // Mass of Sagittarius A* in kg (approximately 4.154 million solar masses)
 
-// Initial light ray position and direction (very far from the black hole)
-olc::vd2d v2dLoopyLoop = { -1e11, 3.13106302719999999e10 };
+double dArbitraryfactor = 2.5;			// Arbitrary factor for visualization of event horizon
 
-olc::vd2d v2dConstLightDir = { C, 0.0 }; // Const Initial direction of the light ray (pointing right along the x-axis)
+// The Light Ray initial position and direction that will loop around the black hole
+olc::vd2d vd2dLoopyLoop = { -1e+11, 3.13106302719999999e+10 };
 
-float WorldWidth = 100000000000.0f * 2.0f; // Width of the viewport in meters  TODO: adjust for better view
-float WorldHeight = 75000000000.0f * 2.0f; // Height of the viewport in meters TODO: adjust for better view
+olc::vd2d vd2dConstLightDir = { C, 0.0 };// Const Initial direction of the light ray (pointing right along the x-axis)
+
+const double dKMtoMeters = 1e+3;		// Conversion factor from kilometers to meters
+const double dMetersToKM = 1e-3;		// Conversion factor from meters to kilometers
+const double dScreenMToWorldVM = 1e+11;	// Conversion factor from Screen meters to WorldView Meters(1e11 meters)
+double WorldWidth = 0;					// Width of the viewport in meters  
+double WorldHeight = 0;					// Height of the viewport in meters
+
+                     
 
 #define OLC_PGEX_SPLASHSCREEN		// Manages the GPL-3.0 Licence requirements 
 #include "olcPGEX_SplashScreen.h"
 
 
 // Override base class with your custom functionality
-class Example : public olc::PixelGameEngine
+class PGEBlackHoleDemo : public olc::PixelGameEngine
 {
 
 public:
-	//olc::SplashScreen olcSplashScreen;
+	olc::SplashScreen olcSplashScreen;
 
 	// In Example's constructor, initialize PBH_SagittariusA after the class definition
-	Example() {
+	PGEBlackHoleDemo() {
 		sAppName = "PGE Black Hole Modelling CodeJam2025";
 
 	}
@@ -56,7 +62,7 @@ public:
 	{
 		olc::vd3d vPosition = { 0.0, 0.0, 0.0 };
 		double Mass;			// The mass of the black hole in kilograms (kg).... these are big numbers!
-		double r_s;			// the Schwarzschild radius (r_s) can be calculated using the formula: \[r_s = \frac{ 2GM }{c\ ^ 2} \]
+		double r_s;				// The Schwarzschild radius (r_s) can be calculated using the formula: \[r_s = \frac{ 2GM }{c\ ^ 2} \]
 		double EventHorizon;	// Typically set at 2.5 times the Schwarzschild radius for visualization
 
 		PGEBlackHole(olc::vf3d position, double mass) : vPosition(position), Mass(mass)
@@ -70,7 +76,7 @@ public:
 		olc::vd2d Position;				// Current position in Cartesian coordinates
 		olc::vd2d Direction;			// Direction vector (velocity in Cartesian)
 		olc::vd2d Polar;				// Polar coordinates (r, phi)
-		std::vector<olc::vd2d> trail; // Trail of positions
+		std::vector<olc::vd2d> trail;	// Trail of positions
 
 		double r;		// Radius (magnitude of pos)
 		double phi;		// Angle from origin
@@ -102,33 +108,6 @@ public:
 	};
 	
 
-	// Light ray structure
-	//struct Ray {
-	//	// -- cartesian coords -- //
-	//	double x;   double y;
-	//	// -- polar coords -- //
-	//	double r;   double phi;
-	//	double dr;  double dphi;
-	//	std::vector<olc::vd2d> trail; // trail of points
-	//	double E, L;             // conserved quantities
-
-	//	Ray(olc::vd2d pos, olc::vd2d dir, PGEBlackHole blackhole) : x(pos.x), y(pos.y), r(pos.mag()), phi(atan2(pos.y, pos.x)), dr(dir.x), dphi(dir.y) {
-	//		// step 1) get polar coords (r, phi) :
-	//		this->r = sqrt(x * x + y * y);
-	//		this->phi = atan2(y, x);
-	//		// step 2) seed velocities :
-	//		dr = dir.x * cos(phi) + dir.y * sin(phi); // m/s
-	//		dphi = (-dir.x * sin(phi) + dir.y * cos(phi)) / r;
-	//		// step 3) store conserved quantities
-	//		L = r * r * dphi;
-	//		double f = 1.0 - blackhole.dr_s / r;
-	//		double dt_d = sqrt((dr * dr) / (f * f) + (r * r * dphi * dphi) / f);
-	//		E = f * dt_d;
-	//		// step 4) start trail :
-	//		trail.push_back({ x, y });
-	//	}
-
-	//};
 	std::vector<Ray> rays;
 
 	PGEBlackHole SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass); // Sagittarius A* black hole
@@ -140,13 +119,13 @@ public:
 
 	void DrawRays(const std::vector<Ray>& rays) {
 		// draw current ray positions as points
-		double screenX = 0.0;
-		double screenY = 0.0;
+		int32_t screenX = 0;
+		int32_t screenY = 0;
 		float alpha = 1.0f;
 
 		for (const auto& ray : rays) {
-			screenX = (ray.Position.x / WorldWidth + 0.5) * ScreenWidth();
-			screenY = (ray.Position.y / WorldHeight + 0.5) * ScreenHeight();
+			screenX = int32_t((ray.Position.x / WorldWidth + 0.5) * ScreenWidth());
+			screenY = int32_t((ray.Position.y / WorldHeight + 0.5) * ScreenHeight());
 			Draw(screenX, screenY, olc::WHITE);
 		}
 
@@ -159,8 +138,8 @@ public:
 				// older points (i=0) get alpha≈0, newer get alpha≈1
 				alpha = float(i) / float(N - 1);
 				// convert world coords to screen coords
-				screenX = (ray.trail[i].x / WorldWidth + 0.5) * ScreenWidth();
-				screenY = (ray.trail[i].y / WorldHeight + 0.5) * ScreenHeight();
+				screenX = int32_t((ray.trail[i].x / WorldWidth + 0.5) * ScreenWidth());
+				screenY = int32_t((ray.trail[i].y / WorldHeight + 0.5) * ScreenHeight());
 				Draw(screenX, screenY, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
 
 			}
@@ -173,7 +152,7 @@ public:
 		if (ray.r <= rs) return; // stop if inside the event horizon
 		rk4Step(ray, d, rs);
 
-		// 2) convert back to cartesian x,y
+		// 2) convert back to cartesian x,y, TODO rework this to use 2D vectors properly
 		ray.Position.x = ray.r * cos(ray.phi);
 		ray.Position.y = ray.r * sin(ray.phi);
 
@@ -183,7 +162,13 @@ public:
 
 
 	// Some functions to help with the physics
-	void geodesicRHS(const Ray& ray, double rhs[4], double rs) {
+
+	/*
+	* The geodesicRHS function computes the right-hand side of the geodesic equations for a given ray in a Schwarzschild spacetime, 
+	* updating the provided rhs array with derivatives of the ray's position and angular momentum.
+	*/
+	void geodesicRHS(const Ray& ray, double rhs[4], double rs) 
+	{
 		double r = ray.r;
 		double dr = ray.dr;
 		double dphi = ray.dphi;
@@ -207,12 +192,18 @@ public:
 		rhs[3] = -2.0 * dr * dphi / r;
 	}
 
-	void addState(const double a[4], const double b[4], double factor, double out[4]) {
+	void addState(const double a[4], const double b[4], double factor, double out[4])
+	{
 		for (int i = 0; i < 4; i++)
 			out[i] = a[i] + b[i] * factor;
 	}
 
-	void rk4Step(Ray& ray, double d, double rs) {
+	/*
+	* The rk4Step function implements a single step of the Runge-Kutta 4th order method to update the state of a Ray object 
+	* based on its current properties and a given time step.
+	*/
+	void rk4Step(Ray& ray, double d, double rs) 
+	{
 		double y0[4] = { ray.r, ray.phi, ray.dr, ray.dphi };
 		double k1[4], k2[4], k3[4], k4[4], temp[4];
 
@@ -238,13 +229,13 @@ public:
 
 
 
-
-
-
-
 public:
 	bool OnUserCreate() override
 	{
+
+		// Setup up worldview parameters
+		WorldWidth = double((ScreenWidth() * 2.0) / dKMtoMeters)* dScreenMToWorldVM;	// Width of the WorldView in meters
+		WorldHeight = double((ScreenHeight() * 2.0) / dKMtoMeters) * dScreenMToWorldVM;	// Height of the WorldView in meters
 
 		/*
 			Sagittarius A*, the supermassive black hole at the center of our Milky Way galaxy, and has an estimated mass of approximately 4.154 million solar masses.
@@ -257,11 +248,8 @@ public:
 			Create a black hole with the mass of Sagittarius A* at the origin
 		*/
 		SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass);
-		//rays.push_back(Ray({ 0.0, 0.0 }, { 1.0, 0.0 }, SagittariusA));
 
-		rays.push_back(Ray(v2dLoopyLoop, v2dConstLightDir, SagittariusA));
-
-		//rays.push_back(Ray({ -1.005e11, 3.13106302719999999e10 }, { C, 0.0 }, SagittariusA));
+		rays.push_back(Ray(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
 
 		return true;
 	}
@@ -273,6 +261,12 @@ public:
 		float fRadus = std::min(ScreenWidth(), ScreenHeight()) / 2.0f * 0.15f;
 		FillCircle(vCenterPos, fRadus, olc::DARK_YELLOW);
 		FillCircle(vCenterPos, fRadus - 0.5, olc::BLACK);
+
+		if (GetKey(olc::Key::R).bPressed)
+		{
+			rays.clear();
+			rays.push_back(Ray(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
+		}
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
 			for (auto& ray : rays) {
@@ -281,9 +275,13 @@ public:
 			}
 
 		}
+
+		if (GetKey(olc::Key::ESCAPE).bPressed)
+		{
+			return false;
+		}
 			
-		
-		
+
 		return true;
 	}
 
@@ -293,8 +291,8 @@ public:
 
 int main()
 {
-	Example demo;
-	if (demo.Construct(800, 600, 1, 1))
+	PGEBlackHoleDemo demo;
+	if (demo.Construct(1280, 720, 1, 1))
 		demo.Start();
 	return 0;
 }
