@@ -75,10 +75,10 @@ public:
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
-	olc::vf3d vf3dCamera = { 5.0f, 5.0f, 40.0f };    // vf3d camera direction
+	olc::vf3d vf3dCamera = { 0.0f, 0.0f, -20.0f };    // vf3d camera direction
 	olc::vf3d vf3dLookDir = { 0.0f, 0.0f, 1.0f };    // vf3d look direction
 	olc::vf3d vf3dForward = { 0.0f, 0.0f, 0.0f };    // vf3d Forward direction
-	olc::vf3d vf3dOffset = { 5.0f, 5.0f, 40.0f };    // vf3d Offset
+	olc::vf3d vf3dOffset = { 0.0f, 0.0f, -20.0f };    // vf3d Offset
 
 	// Camera angles
 	float fYaw = 0.0f;		    // FPS Camera rotation in X plane
@@ -97,9 +97,10 @@ public:
 	olc::vf3d vf3dSkyCubeScale = { 600.0f, 600.0f, 600.0f };    // vf3d SkyCube Scale (in sort its Size)
 	olc::vf3d vf3dSkyCubeLocation = { 0.0f, 0.0f, 0.0f };		// vf3d SkyCube Location 
 	olc::vf3d vf3dSkyCubeOffset = { -200.0f, -300.0f, -200.0f };// vf3d SkyCube Offset
+	olc::vf3d vf3dCubeBLCorner = { 0.0f, 0.0f, 0.0f };		    // vf3d Cube bottom left corner
 
 	olc::vf3d vf3dBlackHoleScale = { 10.0f, 10.0f, 10.0f };		// vf3d Black hole Scale (in sort its Size)
-	olc::vf3d vf3dBlackHoleLocation = { 10.0f, 0.0f, 0.0f };	// vf3d Black hole Location 
+	olc::vf3d vf3dBlackHoleLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Black hole Location 
 	olc::vf3d vf3dBlackHoleOffset = { 0.0f, 0.0f, 0.0f };		// vf3d black hole Offset
 
 	// Sphere default properties
@@ -304,6 +305,18 @@ public:
 		ray.dphi += (d / 6.0) * (k1[3] + 2 * k2[3] + 2 * k3[3] + k4[3]);
 	}
 
+	/*
+	* Returns the center point of a cube given its bottom-left corner and side length.
+	*/
+	olc::vf3d getCubeCornerFromCenter(olc::vf3d centerpos, float sideLength)
+	{
+		olc::vf3d corner;
+		corner.x = centerpos.x + sideLength / 2.0f;
+		corner.y = centerpos.y + sideLength / 2.0f;
+		corner.z = centerpos.z + sideLength / 2.0f;
+		return corner;
+	}
+
 public:
 
 	// Load any 3D objects here
@@ -326,7 +339,11 @@ public:
 
 		// Load any textures here
 		renSkyCube.Load("assets/images/spacetexture.png");
+		renStar.Load("assets/images/suntexture.jpg");
 
+
+		// Load Properties for Renderables
+		vf3dCubeBLCorner = getCubeCornerFromCenter(vf3dCubeBLCorner, 10.0f);
 	}
 
 	/*
@@ -534,6 +551,7 @@ public:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
+		SetDrawTarget(nullptr);
 		Clear(olc::BLACK);
 		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
 		float fRadus = std::min(ScreenWidth(), ScreenHeight()) / 2.0f * 0.15f;
@@ -558,7 +576,67 @@ public:
 		{
 			return false;
 		}
-		
+
+		// 3D Render section
+		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
+		olc::mf4d mCubeTrans, mCubeScale;
+		olc::mf4d mSkyCubeTrans, mSkyCubeScale;
+		olc::mf4d mSphereTrans, mSphereScale, mSphereRotationX, mSphereRotationY, mSphereRotationZ;
+		olc::mf4d mPosition, mCollision;
+		olc::mf4d mMovement, mOffset;
+
+		// Setup Black hole sphere
+		 // Sphere
+		fSphereRotaotionY += (fSphereRoC * fElapsedTime);
+		if (fSphereRotaotionY > 6.28318531) fSphereRotaotionY = 0;
+		mSphereTrans.translate(vf3dBlackHoleLocation);
+		mSphereScale.scale(vf3dBlackHoleScale);
+		mSphereRotationY.rotateY(fSphereRotaotionY);
+		mSphereRotationZ.rotateZ(3.14159265);
+
+		matMSphere = mSphereTrans * mSphereScale * mSphereRotationZ; // Rotate the Sphere into the correct North/South pole position
+		matMSphere = matMSphere * mSphereRotationY; 
+
+
+		// Setup Camera
+		 // Create a "Point At"
+		olc::vf3d vf3dTarget = { 0,0,1 };
+
+		mRotationY.rotateY(fTheta);  // Left/Right
+		mRotationX.rotateX(fYaw);    // Up/Down
+
+		vf3dLookDir = mRotationY * mRotationX * vf3dTarget;   // Left-Right * Up-Down
+		vf3dTarget = vf3dCamera + vf3dLookDir;
+
+		Cam3D.SetPosition(vf3dCamera);
+		Cam3D.SetTarget(vf3dTarget);
+		Cam3D.Update();
+		matWorld = Cam3D.GetViewMatrix();
+
+		// Manage forward / backwards
+		vf3dForward = vf3dLookDir * (fForwardRoC * fElapsedTime);
+
+		// Setup SkyCube
+		mSkyCubeTrans.translate(vf3dSkyCubeOffset + Cam3D.GetPosition());
+		mSkyCubeScale.scale(vf3dSkyCubeScale);
+
+		mSkyCube = mSkyCubeTrans * mSkyCubeScale;
+
+		HW3D_Projection(Cam3D.GetProjectionMatrix().m);
+
+		HW3D_DrawObject((matWorld * mSkyCube).m, renSkyCube.Decal(), matSkyCube.layout, matSkyCube.pos, matSkyCube.uv, matSkyCube.col);
+
+		HW3D_DrawLine((matWorld).m, {0.0f, 0.0f, 0.0f}, {100.0f, 100.0f, 100.0f}, olc::RED);
+
+		HW3D_DrawObject((matWorld * matMSphere).m, renStar.Decal(), matSphere.layout, matSphere.pos, matSphere.uv, matSphere.col);
+
+		HW3D_DrawLineBox((matWorld).m, { -vf3dCubeBLCorner.x, -vf3dCubeBLCorner.y, -vf3dCubeBLCorner.z }, { 10.0f, 10.0f, 10.0f }, olc::YELLOW);
+
+
+
+		// Update Camera by user input
+		UpdateCamByUserInput(fElapsedTime);
+
 		// Display Messages
 		DisplayMessages();
 
