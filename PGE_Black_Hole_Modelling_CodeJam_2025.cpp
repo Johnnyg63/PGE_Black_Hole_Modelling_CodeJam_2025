@@ -27,9 +27,9 @@ const double dSagittariusAMass = 4.1e+6 * dSolarMass; // Mass of Sagittarius A* 
 double dArbitraryfactor = 2.5;			// Arbitrary factor for visualization of event horizon
 
 // The Light Ray initial position and direction that will loop around the black hole
-olc::vd2d vd2dLoopyLoop = { -1e+11, 3.13106302719999999e+10 };
+olc::vd3d vd2dLoopyLoop = { -1e+11, 3.13106302719999999e+10, 0.0 };
 
-olc::vd2d vd2dConstLightDir = { C, 0.0 };// Const Initial direction of the light ray (pointing right along the x-axis)
+olc::vd3d vd2dConstLightDir = { C, 0.0, 0.0 };// Const Initial direction of the light ray (pointing right along the x-axis)
 
 const double dKMtoMeters = 1e+3;		// Conversion factor from kilometers to meters
 const double dMetersToKM = 1e-3;		// Conversion factor from meters to kilometers
@@ -73,10 +73,10 @@ public:
 	};
 
 	struct Ray {
-		olc::vd2d Position;				// Current position in Cartesian coordinates
-		olc::vd2d Direction;			// Direction vector (velocity in Cartesian)
-		olc::vd2d Polar;				// Polar coordinates (r, phi)
-		std::vector<olc::vd2d> trail;	// Trail of positions
+		olc::vd3d Position;				// Current position in Cartesian coordinates
+		olc::vd3d Direction;			// Direction vector (velocity in Cartesian)
+		olc::vd3d Polar;				// Polar coordinates (r, phi)
+		std::vector<olc::vd3d> trail;	// Trail of positions
 
 		double r;		// Radius (magnitude of pos)
 		double phi;		// Angle from origin
@@ -85,7 +85,7 @@ public:
 		double E;		// Energy 
 		double L;		// Angular momentum
 
-		Ray(olc::vd2d position, olc::vd2d direction, PGEBlackHole blackhole)
+		Ray(olc::vd3d position, olc::vd3d direction, PGEBlackHole blackhole)
 			: Position(position), Direction(direction), Polar(position.polar())
 		{
 			// Convert to polar coordinates

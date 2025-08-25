@@ -179,6 +179,12 @@ namespace olc
 			return v_3d(x * r, y * r, z * r);
 		}
 
+		// Treat this as cartesian coordinate (X, Y, Z), return polar equivalent (R, Theta, PHI)
+		inline constexpr v_3d polar() const
+		{
+			return v_3d(mag(), std::atan2(y, x), std::acos(z / mag()));
+		}
+
 		// Rounds all components down
 		inline constexpr v_3d floor() const
 		{
