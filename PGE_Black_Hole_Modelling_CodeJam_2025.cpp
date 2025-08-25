@@ -48,7 +48,7 @@ class PGEBlackHoleDemo : public olc::PixelGameEngine
 {
 
 public:
-	// olc::SplashScreen olcSplashScreen; TODO add a splash screen
+	olc::SplashScreen olcSplashScreen; //TODO add a splash screen
 
 	// In Example's constructor, initialize PBH_SagittariusA after the class definition
 	PGEBlackHoleDemo() {
@@ -137,6 +137,7 @@ public:
 	olc::vi2d centreScreenPos;
 
 public:
+
 	// Black hole structure
 	struct PGEBlackHole
 	{
@@ -239,6 +240,46 @@ public:
 		ray.trail.push_back(ray.Position);
 	}
 
+
+
+	olc::Sprite* CreateLeftCrossTextMapImage(
+		std::string left, std::string top,
+		std::string front, std::string bottom, 
+		std::string right, std::string back)
+	{
+		/*
+		*  __________
+		* |   TP     |
+		* | LTFRRTBK |
+		* |   BM     |
+		*  ----------
+		*/
+		olc::Sprite* sprleft = new olc::Sprite(left);
+		olc::Sprite* sprtop = new olc::Sprite(top);
+		olc::Sprite* sprfront = new olc::Sprite(front);
+		olc::Sprite* sprbottom = new olc::Sprite(bottom);
+		olc::Sprite* sprright = new olc::Sprite(right);
+		olc::Sprite* sprback = new olc::Sprite(back);
+
+		olc::Sprite* skyCube = new olc::Sprite(sprleft->width * 4, sprleft->height * 3);
+		SetDrawTarget(skyCube);
+		Clear(olc::BLANK);
+		
+		// Left
+		DrawSprite(0, sprleft->height, sprleft);
+		// Top
+		DrawSprite(sprtop->width, 0, sprtop);
+		// Front
+		DrawSprite(sprleft->width, sprleft->height, sprfront);
+		// Bottom
+		DrawSprite(sprbottom->width, sprleft->height * 2, sprbottom);
+		// Right
+		DrawSprite(sprleft->width * 2, sprleft->height, sprright);
+		// Back
+		DrawSprite(sprleft->width * 3, sprleft->height, sprback);
+		
+		return skyCube;
+	}
 public:
 	// Some functions to help with the physics
 
@@ -338,10 +379,21 @@ public:
 
 
 		// Load any textures here
-		renSkyCube.Load("assets/images/spacetexture.png");
-		renStar.Load("assets/images/suntexture.jpg");
-
-
+		renStar.Load("assets/images/NASA_2020_4k.jpg");
+		//renSkyCube.Load("assets/images/Milkyway_Skybox_Preview.jpg");
+		auto skyCubeImage = CreateLeftCrossTextMapImage(
+			"assets/images/skybox_left.png",
+			"assets/images/skybox_top.png",
+			"assets/images/skybox_front.png",
+			"assets/images/skybox_bottom.png",
+			"assets/images/skybox_right.png",
+			"assets/images/skybox_back.png"
+		);
+		renSkyCube.Create(skyCubeImage->width, skyCubeImage->height);
+		renSkyCube.Sprite()->pColData.swap(skyCubeImage->pColData);
+		renSkyCube.Decal()->Update();
+		delete skyCubeImage;
+		
 		// Load Properties for Renderables
 		vf3dCubeBLCorner = getCubeCornerFromCenter(vf3dCubeBLCorner, 10.0f);
 	}
@@ -580,7 +632,7 @@ public:
 		// 3D Render section
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
 		olc::mf4d mCubeTrans, mCubeScale;
-		olc::mf4d mSkyCubeTrans, mSkyCubeScale;
+		olc::mf4d mSkyCubeTrans, mSkyCubeScale, mSkyCubeRotationX, mSkyCubeRotationY, mSkyCubeRotationZ;;
 		olc::mf4d mSphereTrans, mSphereScale, mSphereRotationX, mSphereRotationY, mSphereRotationZ;
 		olc::mf4d mPosition, mCollision;
 		olc::mf4d mMovement, mOffset;
