@@ -117,11 +117,12 @@ public:
 	/* End Decals */
 
 	/* Renderables */
-	olc::Renderable renOLCPGEMobLogo;	// OLC PGE Mob Logo Renderable
-	olc::Renderable renCube;			// Sanity Cube Renderable 
-	olc::Renderable renBlackHole;		// Black Hole Renderable
-	olc::Renderable renStar;			// Star Renderable
-	olc::Renderable renSkyCube;			// Sky Cube Renderable
+	olc::Renderable renOLCPGEMobLogo;			// OLC PGE Mob Logo Renderable
+	olc::Renderable renCube;					// Sanity Cube Renderable 
+	olc::Renderable renBlackHole;				// Black Hole Renderable
+	olc::Renderable renStar;					// Star Renderable
+	olc::Renderable renSkyCube;					// Sky Cube Renderable
+	olc::Renderable renBlackHoleEventHorizon;	// Black Hole Event Horizon Renderable
 	/* End Reneders */
 
 	/* Vectors */
@@ -195,18 +196,33 @@ public:
 
 public:
 
+	
+	
 	// Some drawing functions
+	olc::Renderable CreateBlackHoleEventHorizon(float radius) {
+		olc::Renderable ren;
+		ren.Create((radius * 2) + 2, (radius * 2) + 2);
+		SetDrawTarget(ren.Sprite());
+		Clear(olc::BLANK);
+		FillCircle(radius, radius, radius, olc::DARK_YELLOW);
+		FillCircle(radius, radius, radius - 1.0f, olc::BLACK);
+		SetDrawTarget(nullptr);
+		ren.Decal()->Update();
+		return ren;
+	}
 
 	void DrawRays(const std::vector<Ray>& rays) {
 		// draw current ray positions as points
-		int32_t screenX = 0;
-		int32_t screenY = 0;
+		float screenX = 0;
+		float screenY = 0;
 		float alpha = 1.0f;
 
 		for (const auto& ray : rays) {
 			screenX = int32_t((ray.Position.x / WorldWidth + 0.5) * ScreenWidth());
 			screenY = int32_t((ray.Position.y / WorldHeight + 0.5) * ScreenHeight());
-			Draw(screenX, screenY, olc::WHITE);
+			DrawLineDecal(centreScreenPos, { screenX, screenY }, olc::WHITE);
+			DrawLineDecal({ screenX, screenY }, { screenX + 1, screenY }, olc::WHITE);
+			//Draw(screenX, screenY, olc::WHITE);
 		}
 
 		// draw each trail with fading alpha
@@ -220,7 +236,7 @@ public:
 				// convert world coords to screen coords
 				screenX = int32_t((ray.trail[i].x / WorldWidth + 0.5) * ScreenWidth());
 				screenY = int32_t((ray.trail[i].y / WorldHeight + 0.5) * ScreenHeight());
-				Draw(screenX, screenY, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
+				DrawLineDecal({ screenX, screenY }, { screenX + 1, screenY }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
 
 			}
 
@@ -239,7 +255,6 @@ public:
 		// 3) record the trail
 		ray.trail.push_back(ray.Position);
 	}
-
 
 
 	olc::Sprite* CreateLeftCrossTextMapImage(
@@ -280,6 +295,7 @@ public:
 		
 		return skyCube;
 	}
+
 public:
 	// Some functions to help with the physics
 
@@ -380,8 +396,8 @@ public:
 
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
-		//renSkyCube.Load("assets/images/Milkyway_Skybox_Preview.jpg");
-		auto skyCubeImage = CreateLeftCrossTextMapImage(
+		renSkyCube.Load("assets/images/spacetexture.png");
+		/*auto skyCubeImage = CreateLeftCrossTextMapImage(
 			"assets/images/skybox_left.png",
 			"assets/images/skybox_top.png",
 			"assets/images/skybox_front.png",
@@ -392,7 +408,7 @@ public:
 		renSkyCube.Create(skyCubeImage->width, skyCubeImage->height);
 		renSkyCube.Sprite()->pColData.swap(skyCubeImage->pColData);
 		renSkyCube.Decal()->Update();
-		delete skyCubeImage;
+		delete skyCubeImage;*/
 		
 		// Load Properties for Renderables
 		vf3dCubeBLCorner = getCubeCornerFromCenter(vf3dCubeBLCorner, 10.0f);
@@ -492,7 +508,7 @@ public:
 
 
 		// Moving UP
-		if (GetKey(olc::Key::SPACE).bHeld)
+		if (GetKey(olc::Key::U).bHeld)
 		{
 			fJump += fJumpRoC * fElapsedTime;
 			vf3dCamera.y = fJump;
@@ -579,6 +595,8 @@ public:
 		Load3DObjects();
 
 		// Load any sprites, decals or renderables here
+		float fRadius = std::min(ScreenWidth(), ScreenHeight()) / 2.0f * 0.15f;
+		renBlackHoleEventHorizon = CreateBlackHoleEventHorizon(fRadius);
 		//renOLCPGEMobLogo.Load("assets/images/olcpgemob.png");
 		
 
@@ -605,29 +623,7 @@ public:
 	{
 		SetDrawTarget(nullptr);
 		Clear(olc::BLACK);
-		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
-		float fRadus = std::min(ScreenWidth(), ScreenHeight()) / 2.0f * 0.15f;
-		FillCircle(vCenterPos, fRadus, olc::DARK_YELLOW);
-		FillCircle(vCenterPos, fRadus - 0.5, olc::BLACK);
-
-		if (GetKey(olc::Key::R).bPressed)
-		{
-			rays.clear();
-			rays.push_back(Ray(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
-		}
-		if (GetKey(olc::Key::SPACE).bHeld)
-		{
-			for (auto& ray : rays) {
-				RayStep(ray, 1.0f, SagittariusA.r_s);
-				DrawRays(rays);
-			}
-
-		}
-
-		if (GetKey(olc::Key::ESCAPE).bPressed)
-		{
-			return false;
-		}
+			
 
 		// 3D Render section
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
@@ -684,6 +680,28 @@ public:
 
 		HW3D_DrawLineBox((matWorld).m, { -vf3dCubeBLCorner.x, -vf3dCubeBLCorner.y, -vf3dCubeBLCorner.z }, { 10.0f, 10.0f, 10.0f }, olc::YELLOW);
 
+
+		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
+		DrawDecal(vCenterPos - olc::vf2d(renBlackHoleEventHorizon.Sprite()->width / 2.0f, renBlackHoleEventHorizon.Sprite()->height / 2.0f), renBlackHoleEventHorizon.Decal());
+
+		if (GetKey(olc::Key::R).bPressed)
+		{
+			rays.clear();
+			rays.push_back(Ray(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
+		}
+		if (GetKey(olc::Key::SPACE).bHeld)
+		{
+			for (auto& ray : rays) {
+				RayStep(ray, 1.0f, SagittariusA.r_s);
+				DrawRays(rays);
+			}
+
+		}
+
+		if (GetKey(olc::Key::ESCAPE).bPressed)
+		{
+			return false;
+		}
 
 
 		// Update Camera by user input
