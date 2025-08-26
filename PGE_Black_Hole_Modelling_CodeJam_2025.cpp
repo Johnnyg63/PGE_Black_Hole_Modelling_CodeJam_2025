@@ -665,8 +665,10 @@ public:
 		mEventHozTrans.translate(vf3dEventHorizonLocation);
 		mEventHozScale.scale(vf3dEventHorizonScale);
 		mEventHozRotationY.rotateY(fTheta);
+		mEventHozRotationX.rotateX(fYaw);
 		
 		matMEventHorizon = mEventHozTrans * mEventHozScale * mEventHozRotationY; // Rotate the Sphere into the correct North/South pole position
+		matMEventHorizon = matMEventHorizon * mEventHozRotationX;
 		mEventHozRotationZ.rotateZ(fTheta);
 		matMEventHorizon = matMEventHorizon * mEventHozRotationZ;
 
