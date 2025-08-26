@@ -65,6 +65,7 @@ public:
 	olc::mf4d matCube;		// Cube Matrix
 	olc::mf4d mSkyCube;		// Sky Cube Matrix
 	olc::mf4d matMSphere;	// Matrix for Sphere (Sun, Stars etc)
+	olc::mf4d matMBackGround; // Matrix for Background Space Grid
 	olc::mf4d matMEventHorizon; // Matrix for Event Horizon
 	olc::mf4d matProject;	// Projection Matrix
 
@@ -75,6 +76,7 @@ public:
 	olc::utils::hw3d::mesh matSphere;		// Sphere Mesh (black hole, Sun, Stars etc)
 	olc::utils::hw3d::mesh matEventHorizon; // Event Horizon Mesh
 	olc::utils::hw3d::mesh matBlackHole;	// Black Hole Mesh
+	olc::utils::hw3d::mesh matBackGround; // Black Hole Decal Mesh
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
@@ -110,6 +112,11 @@ public:
 	olc::vd3d vf3dEventHorizonLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
 	olc::vd3d vf3dEventHorizonOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
 
+	olc::vf3d vf3dBackGroundScale = { 600.0f, 600.0f, 600.0f };    // vf3d BackGround Scale (in sort its Size)
+	olc::vf3d vf3dSBackGroundLocation = { 0.0f, 0.0f, 0.0f };		// vf3d BackGround Location 
+	olc::vf3d vf3dBackGroundOffset = { 0.0f, 0.0f, 0.0f };// vf3d BackGround Offset
+	
+
 	// Sphere default properties
 	float fSphereRoC = 0.5f;				// Sphere Rate of Change
 	float fSphereRotaotionY = -1.57079633;	// Sphere start Y rotation position
@@ -135,6 +142,7 @@ public:
 	olc::Renderable renSkyCube;					// Sky Cube Renderable
 	olc::Renderable renBlackHoleDecal;			// Black Hole Decal Renderable
 	olc::Renderable renEventHorizon;			// Event Horizon Renderable
+	olc::Renderable renBackGround;				// Background Renderable
 	/* End Reneders */
 
 	/* Vectors */
@@ -406,12 +414,14 @@ public:
 		matSkyCube = olc::utils::hw3d::CreateCube(olc::utils::hw3d::LEFT_CROSS_TEXTURE_RECT_MAP); // Default SkyCube
 		matEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32); // Default Event Horizon
 		matBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK); // Default Black Hole
+		matBackGround = olc::utils::hw3d::CreateSphere(); // Default sphere for background
 
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
 		renEventHorizon.Load("assets/images/NASA_2020_4k.jpg");
 		renSkyCube.Load("assets/images/spacetexture.png");
 		renBlackHoleDecal = CreateBlackHoleEventHorizon(1.0f);
+		renBackGround.Load("assets/images/starmap_2020_4k.png");
 		/*auto skyCubeImage = CreateLeftCrossTextMapImage(
 			"assets/images/skybox_left.png",
 			"assets/images/skybox_top.png",
@@ -643,23 +653,13 @@ public:
 		// 3D Render section
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
 		olc::mf4d mCubeTrans, mCubeScale;
-		olc::mf4d mSkyCubeTrans, mSkyCubeScale, mSkyCubeRotationX, mSkyCubeRotationY, mSkyCubeRotationZ;;
+		olc::mf4d mSkyCubeTrans, mSkyCubeScale, mSkyCubeRotationX, mSkyCubeRotationY, mSkyCubeRotationZ;
 		olc::mf4d mSphereTrans, mSphereScale, mSphereRotationX, mSphereRotationY, mSphereRotationZ;
 		olc::mf4d mEventHozTrans, mEventHozScale, mEventHozRotationX, mEventHozRotationY, mEventHozRotationZ;
 		olc::mf4d mPosition, mCollision;
 		olc::mf4d mMovement, mOffset;
+		olc::mf4d mBackGroundTrans, mBackGroundScale, mBackGroundRotationX, mBackGroundRotationY, mBackGroundRotationZ;
 
-		// Setup Black hole sphere
-		 // Sphere
-		fSphereRotaotionY += (fSphereRoC * fElapsedTime);
-		if (fSphereRotaotionY > 6.28318531) fSphereRotaotionY = 0;
-		mSphereTrans.translate(vf3dBlackHoleLocation);
-		mSphereScale.scale(vf3dBlackHoleScale);
-		mSphereRotationY.rotateY(fSphereRotaotionY);
-		mSphereRotationZ.rotateZ(3.14159265);
-
-		matMSphere = mSphereTrans * mSphereScale * mSphereRotationZ; // Rotate the Sphere into the correct North/South pole position
-		matMSphere = matMSphere * mSphereRotationY; 
 
 		// Setup Event Horizon
 		mEventHozTrans.translate(vf3dEventHorizonLocation);
@@ -692,14 +692,23 @@ public:
 		vf3dForward = vf3dLookDir * (fForwardRoC * fElapsedTime);
 
 		// Setup SkyCube
-		mSkyCubeTrans.translate(vf3dSkyCubeOffset + Cam3D.GetPosition());
+		/*mSkyCubeTrans.translate(vf3dSkyCubeOffset + Cam3D.GetPosition());
 		mSkyCubeScale.scale(vf3dSkyCubeScale);
 
-		mSkyCube = mSkyCubeTrans * mSkyCubeScale;
+		mSkyCube = mSkyCubeTrans * mSkyCubeScale;*/
+
+		// Setup World Background
+		mBackGroundTrans.translate(Cam3D.GetPosition());
+		mBackGroundScale.scale(vf3dBackGroundScale);
+		mBackGroundRotationZ.rotateZ(1.606f);
+		mBackGroundRotationY.rotateY(-0.546f);
+
+		matMBackGround = mBackGroundTrans * mBackGroundScale * mBackGroundRotationY * mBackGroundRotationZ;
+
 
 		HW3D_Projection(Cam3D.GetProjectionMatrix().m);
 
-		HW3D_DrawObject((matWorld * mSkyCube).m, renSkyCube.Decal(), matSkyCube.layout, matSkyCube.pos, matSkyCube.uv, matSkyCube.col);
+		HW3D_DrawObject((matWorld * matMBackGround).m, renBackGround.Decal(), matBackGround.layout, matBackGround.pos, matBackGround.uv, matBackGround.col);
 
 		HW3D_DrawLine((matWorld).m, {0.0f, 0.0f, 0.0f}, {100.0f, 100.0f, 100.0f}, olc::RED);
 
