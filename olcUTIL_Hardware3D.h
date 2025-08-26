@@ -238,7 +238,11 @@ namespace olc
 		// Linearly interpolate between this vector, and another vector, given normalised parameter 't'
 		inline constexpr v_3d lerp(const v_3d& v1, const double t) const
 		{
-			return this->operator*(T(1.0 - t)) + (v1 * T(t));
+			// Fix for E0135: class "olc::v_3d<double>" has no member "operator*"
+            // Change this line in v_3d::lerp:
+            // return this->operator*(T(1.0 - t)) + (v1 * T(t));
+            // To:
+            return (*this) * T(1.0 - t) + (v1 * T(t));
 		}
 
 		// Compare if this vector is numerically equal to another
@@ -250,7 +254,11 @@ namespace olc
 		// Compare if this vector is not numerically equal to another
 		inline constexpr bool operator != (const v_3d& rhs) const
 		{
-			return (this->x != rhs.x || this->y != rhs.y || this != rhs.z);
+			// Fix for E0042: operand types are incompatible ("const olc::v_3d<double> *" and "double")
+			// Replace the operator!= implementation with the correct comparison
+			// return (this->x != rhs.x || this->y != rhs.y || this != rhs.z);
+			// To:
+			return (this->x != rhs.x || this->y != rhs.y || this->z != rhs.z);
 		}
 
 		// Return this vector as a std::string, of the form "(x,y)"
@@ -1100,9 +1108,9 @@ namespace olc::utils::hw3d
 
 	// John Galvin
 
-		/*
-		* Creates the all glorious triangle
-		*/
+	/*
+	* Creates the all glorious triangle
+	*/
 	olc::utils::hw3d::mesh CreateTriangle()
 	{
 		olc::utils::hw3d::mesh m;
@@ -1124,7 +1132,7 @@ namespace olc::utils::hw3d
 	/*
 	* Creates a 3 Sided Pyramid
 	*/
-	olc::utils::hw3d::mesh Create3SidedPyramid()
+	olc::utils::hw3d::mesh Create3SidedPyramid(olc::Pixel pixelCol = olc::WHITE)
 	{
 		olc::utils::hw3d::mesh m;
 
@@ -1138,24 +1146,24 @@ namespace olc::utils::hw3d
 			};
 
 		// Face 1 
-		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::GREY);	// Position 0 (Top Point)
-		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, olc::GREY);	// Position 1
-		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, olc::GREY);	// Position 2
+		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol);	// Position 0 (Top Point)
+		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, pixelCol);	// Position 1
+		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, pixelCol);	// Position 2
 
 		// Face 2
-		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::YELLOW);	// Position 0 ( Top Point)
-		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, olc::YELLOW);	// Position 2
-		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::YELLOW);	// Position 3
+		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol);	// Position 0 ( Top Point)
+		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, pixelCol);	// Position 2
+		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol);	// Position 3
 
 		// Face 3
-		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::RED);	// Position 0 ( Top Point)
-		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, olc::RED);	// Position 1
-		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::RED);	// Position 3
+		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol);	// Position 0 ( Top Point)
+		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, pixelCol);	// Position 1
+		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol);	// Position 3
 
 		// Face 4
-		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, olc::GREEN);	// Position 1
-		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, olc::GREEN); // Position 2
-		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, olc::GREEN); // Position 3
+		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, pixelCol);	// Position 1
+		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, pixelCol); // Position 2
+		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol); // Position 3
 
 
 		return m;
@@ -1164,7 +1172,7 @@ namespace olc::utils::hw3d
 	/*
 	* Creates a Square Pyramind
 	*/
-	olc::utils::hw3d::mesh Create4SidedPyramid(SPHERE_TEXTURE_TYPE SphereTextureType = SPHERE_TEXTURE_TYPE::SOLID_TEXTURE)
+	olc::utils::hw3d::mesh Create4SidedPyramid(SPHERE_TEXTURE_TYPE SphereTextureType = SPHERE_TEXTURE_TYPE::SOLID_TEXTURE, olc::Pixel pixelCol = olc::WHITE)
 	{
 		olc::utils::hw3d::mesh m;
 
@@ -1271,10 +1279,10 @@ namespace olc::utils::hw3d
 		}
 		}
 
-		auto meshPushBack = [&](vf3d pos, olc::Pixel col = olc::WHITE)
+		auto meshPushBack = [&](vf3d pos)
 			{
 				vf3d vf3dNorm = pos.norm();
-				m.pos.push_back({ pos.x, pos.y, pos.z }); m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 }); m.col.push_back(col);
+				m.pos.push_back({ pos.x, pos.y, pos.z }); m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 }); m.col.push_back(pixelCol);
 			};
 
 		//Buttom Face has 4 sides therefore 2 trianges (White and Green)
@@ -1787,7 +1795,168 @@ namespace olc::utils::hw3d
 
 	}
 
+	olc::utils::hw3d::mesh CreateFullScreenQuad()
+	{
+		olc::utils::hw3d::mesh m;
+		auto meshPushBack = [&](vf3d pos, vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
+				m.uv.push_back({ uv.x, uv.y });									// TexCoord
+				m.col.push_back(col);											// COLOURS
+			};
+		// First Triangle
+		meshPushBack({ -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f });	// Top Left
+		meshPushBack({ 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f });	// Bottom Right
+		meshPushBack({ -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f });	// Bottom Left
+		// Second Triangle
+		meshPushBack({ -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f });	// Top Left
+		meshPushBack({ 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f });		// Top Right
+		meshPushBack({ 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f });	// Bottom Right
+		return m;
+	}
 
+	olc::utils::hw3d::mesh CreateScreenSpaceQuad(float x, float y, float w, float h)
+	{
+		olc::utils::hw3d::mesh m;
+		auto meshPushBack = [&](vf3d pos, vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();										
+				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
+				m.uv.push_back({ uv.x, uv.y });									// TexCoord
+				m.col.push_back(col);											// COLOURS
+			};
+		// First Triangle
+		meshPushBack({ x, y, 0.0f }, { 0.0f, 0.0f });			// Top Left
+		meshPushBack({ x + w, y + h, 0.0f }, { 1.0f, 1.0f });	// Bottom Right
+		meshPushBack({ x, y + h, 0.0f }, { 0.0f, 1.0f });		// Bottom Left
+		// Second Triangle
+		meshPushBack({ x, y, 0.0f }, { 0.0f, 0.0f });			// Top Left
+		meshPushBack({ x + w, y, 0.0f }, { 1.0f, 0.0f });		// Top Right
+		meshPushBack({ x + w, y + h, 0.0f }, { 1.0f, 1.0f });	// Bottom Right
+		return m;
+	}
+
+	/*
+	* Creates a Torus 
+	*/
+	olc::utils::hw3d::mesh Create3DTorus(float fMajorRadius, float fMinorRadius, int32_t nMajorSegments = 64, int32_t nMinorSegments = 32, olc::Pixel pixelCol = olc::WHITE)
+	{
+		olc::utils::hw3d::mesh m;
+		float theta0 = 0.0f;
+		float theta1 = 0.0f;
+		float phi0 = 0.0f;
+		float phi1 = 0.0f;
+		float x, y, z;
+
+		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				m.pos.push_back({ pos.x, pos.y, pos.z });			// COORDINATES
+				m.norm.push_back({ norm.x, norm.y, norm.z, 0 });	// NORMS
+				m.uv.push_back({ uv.x, uv.y });						// TexCoord
+				m.col.push_back(col);								// COLOURS
+			};
+
+		for (int i = 0; i < nMajorSegments; ++i)
+		{
+			theta0 = 2.0f * M_PI * i / nMajorSegments;
+			theta1 = 2.0f * M_PI * (i + 1) / nMajorSegments;
+
+			for (int j = 0; j < nMinorSegments; ++j)
+			{
+				phi0 = 2.0f * M_PI * j / nMinorSegments;
+				phi1 = 2.0f * M_PI * (j + 1) / nMinorSegments;
+
+				// Four points of the quad
+				auto getVertex = [&](float theta, float phi) -> olc::vf3d
+					{
+						x = (fMajorRadius + fMinorRadius * cos(phi)) * cos(theta);
+						y = (fMajorRadius + fMinorRadius * cos(phi)) * sin(theta);
+						z = fMinorRadius * sin(phi);
+						return { x, y, z };
+					};
+
+				olc::vf3d p00 = getVertex(theta0, phi0);
+				olc::vf3d p01 = getVertex(theta0, phi1);
+				olc::vf3d p10 = getVertex(theta1, phi0);
+				olc::vf3d p11 = getVertex(theta1, phi1);
+
+				// Normals (from center of tube to surface)
+				auto getNormal = [&](float theta, float phi) -> olc::vf3d
+					{
+						x = cos(theta) * cos(phi);
+						y = sin(theta) * cos(phi);
+						z = sin(phi);
+						return olc::vf3d(x, y, z).norm();
+					};
+
+				olc::vf3d n00 = getNormal(theta0, phi0);
+				olc::vf3d n01 = getNormal(theta0, phi1);
+				olc::vf3d n10 = getNormal(theta1, phi0);
+				olc::vf3d n11 = getNormal(theta1, phi1);
+
+				// UVs
+				olc::vf2d uv00 = { float(i) / nMajorSegments, float(j) / nMinorSegments };
+				olc::vf2d uv01 = { float(i) / nMajorSegments, float(j + 1) / nMinorSegments };
+				olc::vf2d uv10 = { float(i + 1) / nMajorSegments, float(j) / nMinorSegments };
+				olc::vf2d uv11 = { float(i + 1) / nMajorSegments, float(j + 1) / nMinorSegments };
+
+				// First triangle
+				meshPushBack(p00, n00, uv00, pixelCol);
+				meshPushBack(p10, n10, uv10, pixelCol);
+				meshPushBack(p11, n11, uv11, pixelCol);
+
+				// Second triangle
+				meshPushBack(p00, n00, uv00, pixelCol);
+				meshPushBack(p11, n11, uv11, pixelCol);
+				meshPushBack(p01, n01, uv01, pixelCol);
+			}
+		}
+
+		return m;
+
+
+	}
+
+	/*
+	* Creat a 2D Circle plane mesh for a 3D world
+	*/
+	olc::utils::hw3d::mesh Create2DCircle(float fRadius, int32_t nSegmentCount = 64, olc::Pixel pixelCol = olc::WHITE)
+	{
+		olc::utils::hw3d::mesh m;
+		auto meshPushBack = [&](olc::vf3d pos, olc::vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				olc::vf3d norm = { 0, 0, 1 };
+				m.pos.push_back({ pos.x, pos.y, pos.z });
+				m.norm.push_back({ norm.x, norm.y, norm.z, 0 });
+				m.uv.push_back({ uv.x, uv.y });
+				m.col.push_back(col);
+			};
+
+		olc::vf3d center = { 0.0f, 0.0f, 0.0f };
+		olc::vf2d centerUV = { 0.5f, 0.5f };
+
+		for (int i = 0; i < nSegmentCount; ++i)
+		{
+			float theta0 = 2.0f * M_PI * i / nSegmentCount;
+			float theta1 = 2.0f * M_PI * (i + 1) / nSegmentCount;
+
+			olc::vf3d p0 = { fRadius * cos(theta0), fRadius * sin(theta0), 0.0f };
+			olc::vf3d p1 = { fRadius * cos(theta1), fRadius * sin(theta1), 0.0f };
+
+			olc::vf2d uv0 = { 0.5f + 0.5f * cos(theta0), 0.5f + 0.5f * sin(theta0) };
+			olc::vf2d uv1 = { 0.5f + 0.5f * cos(theta1), 0.5f + 0.5f * sin(theta1) };
+
+			// Triangle: center, p0, p1
+			meshPushBack(center, centerUV, pixelCol);
+			meshPushBack(p0, uv0, pixelCol);
+			meshPushBack(p1, uv1, pixelCol);
+		}
+
+		return m;
+	}
 
 	// End John Galvin
 

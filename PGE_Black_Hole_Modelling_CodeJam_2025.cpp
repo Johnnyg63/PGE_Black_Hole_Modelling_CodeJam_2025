@@ -48,7 +48,7 @@ class PGEBlackHoleDemo : public olc::PixelGameEngine
 {
 
 public:
-	olc::SplashScreen olcSplashScreen; //TODO add a splash screen
+	//olc::SplashScreen olcSplashScreen; //TODO add a splash screen
 
 	// In Example's constructor, initialize PBH_SagittariusA after the class definition
 	PGEBlackHoleDemo() {
@@ -64,7 +64,8 @@ public:
 	olc::mf4d matView;		// View Matrix
 	olc::mf4d matCube;		// Cube Matrix
 	olc::mf4d mSkyCube;		// Sky Cube Matrix
-	olc::mf4d matMSphere;	// Matrix for Sphere (black hole, Sun, Stars etc)
+	olc::mf4d matMSphere;	// Matrix for Sphere (Sun, Stars etc)
+	olc::mf4d matMEventHorizon; // Matrix for Event Horizon
 	olc::mf4d matProject;	// Projection Matrix
 
 	/* Meshes */
@@ -72,6 +73,8 @@ public:
 	olc::utils::hw3d::mesh matSanityCube;	// Sanity Cube Mesh
 	olc::utils::hw3d::mesh matSkyCube;		// Sky Cube Mesh
 	olc::utils::hw3d::mesh matSphere;		// Sphere Mesh (black hole, Sun, Stars etc)
+	olc::utils::hw3d::mesh matEventHorizon; // Event Horizon Mesh
+	olc::utils::hw3d::mesh matBlackHole;	// Black Hole Mesh
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
@@ -99,13 +102,21 @@ public:
 	olc::vf3d vf3dSkyCubeOffset = { -200.0f, -300.0f, -200.0f };// vf3d SkyCube Offset
 	olc::vf3d vf3dCubeBLCorner = { 0.0f, 0.0f, 0.0f };		    // vf3d Cube bottom left corner
 
-	olc::vf3d vf3dBlackHoleScale = { 10.0f, 10.0f, 10.0f };		// vf3d Black hole Scale (in sort its Size)
-	olc::vf3d vf3dBlackHoleLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Black hole Location 
+	olc::vf3d vf3dBlackHoleScale = { 1.0f, 1.0f, 1.0f };		// vf3d Black hole Scale (in sort its Size)
+	olc::vf3d vf3dBlackHoleLocation = { 0.0f, 0.0f, 0.0f };		// vf3d Black hole Location 
 	olc::vf3d vf3dBlackHoleOffset = { 0.0f, 0.0f, 0.0f };		// vf3d black hole Offset
 
+	olc::vd3d vf3dEventHorizonScale = { 1.0f, 1.0f, 1.0f };		// vf3d Event Horizon Scale (in sort its Size)
+	olc::vd3d vf3dEventHorizonLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
+	olc::vd3d vf3dEventHorizonOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
+
 	// Sphere default properties
-	float fSphereRoC = 0.5f;    // Sphere Rate of Change
-	float fSphereRotaotionY = -1.57079633; // Sphere start Y rotation position
+	float fSphereRoC = 0.5f;				// Sphere Rate of Change
+	float fSphereRotaotionY = -1.57079633;	// Sphere start Y rotation position
+
+	// Event Horizon default properties
+	float fEventHorizonRoC = 0.5f;				 // Event Horizon Rate of Change
+	float fEventHorizonRotaotionY = 0.0f; // Event Horizon start Y rotation position
 
 public:
 	// Other stuff
@@ -122,7 +133,8 @@ public:
 	olc::Renderable renBlackHole;				// Black Hole Renderable
 	olc::Renderable renStar;					// Star Renderable
 	olc::Renderable renSkyCube;					// Sky Cube Renderable
-	olc::Renderable renBlackHoleEventHorizon;	// Black Hole Event Horizon Renderable
+	olc::Renderable renBlackHoleDecal;			// Black Hole Decal Renderable
+	olc::Renderable renEventHorizon;			// Event Horizon Renderable
 	/* End Reneders */
 
 	/* Vectors */
@@ -392,11 +404,14 @@ public:
 		// Create required matrices
 		matSphere = olc::utils::hw3d::CreateSphere(); // Default sphere
 		matSkyCube = olc::utils::hw3d::CreateCube(olc::utils::hw3d::LEFT_CROSS_TEXTURE_RECT_MAP); // Default SkyCube
-
+		matEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32); // Default Event Horizon
+		matBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK); // Default Black Hole
 
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
+		renEventHorizon.Load("assets/images/NASA_2020_4k.jpg");
 		renSkyCube.Load("assets/images/spacetexture.png");
+		renBlackHoleDecal = CreateBlackHoleEventHorizon(1.0f);
 		/*auto skyCubeImage = CreateLeftCrossTextMapImage(
 			"assets/images/skybox_left.png",
 			"assets/images/skybox_top.png",
@@ -595,8 +610,8 @@ public:
 		Load3DObjects();
 
 		// Load any sprites, decals or renderables here
-		float fRadius = std::min(ScreenWidth(), ScreenHeight()) / 2.0f * 0.15f;
-		renBlackHoleEventHorizon = CreateBlackHoleEventHorizon(fRadius);
+		//float fRadius = std::min(ScreenWidth(), ScreenHeight()) / 2.0f * 0.15f;
+		//renBlackHoleDecal = CreateBlackHoleEventHorizon(fRadius);
 		//renOLCPGEMobLogo.Load("assets/images/olcpgemob.png");
 		
 
@@ -630,6 +645,7 @@ public:
 		olc::mf4d mCubeTrans, mCubeScale;
 		olc::mf4d mSkyCubeTrans, mSkyCubeScale, mSkyCubeRotationX, mSkyCubeRotationY, mSkyCubeRotationZ;;
 		olc::mf4d mSphereTrans, mSphereScale, mSphereRotationX, mSphereRotationY, mSphereRotationZ;
+		olc::mf4d mEventHozTrans, mEventHozScale, mEventHozRotationX, mEventHozRotationY, mEventHozRotationZ;
 		olc::mf4d mPosition, mCollision;
 		olc::mf4d mMovement, mOffset;
 
@@ -644,6 +660,15 @@ public:
 
 		matMSphere = mSphereTrans * mSphereScale * mSphereRotationZ; // Rotate the Sphere into the correct North/South pole position
 		matMSphere = matMSphere * mSphereRotationY; 
+
+		// Setup Event Horizon
+		mEventHozTrans.translate(vf3dEventHorizonLocation);
+		mEventHozScale.scale(vf3dEventHorizonScale);
+		mEventHozRotationY.rotateY(-fTheta);
+		mEventHozRotationZ.rotateZ(3.14159265);
+
+		matMEventHorizon = mEventHozTrans * mEventHozScale * mEventHozRotationZ; // Rotate the Sphere into the correct North/South pole position
+		matMEventHorizon = matMEventHorizon * mEventHozRotationY;
 
 
 		// Setup Camera
@@ -676,13 +701,17 @@ public:
 
 		HW3D_DrawLine((matWorld).m, {0.0f, 0.0f, 0.0f}, {100.0f, 100.0f, 100.0f}, olc::RED);
 
-		HW3D_DrawObject((matWorld * matMSphere).m, renStar.Decal(), matSphere.layout, matSphere.pos, matSphere.uv, matSphere.col);
+		// Draw the black hole
+		HW3D_DrawObject((matWorld * matMEventHorizon).m, nullptr, matBlackHole.layout, matBlackHole.pos, matBlackHole.uv, matBlackHole.col);
+
+		// Draw the Event Horizon
+		HW3D_DrawObject((matWorld * matMEventHorizon).m, renStar.Decal(), matEventHorizon.layout, matEventHorizon.pos, matEventHorizon.uv, matEventHorizon.col);
 
 		HW3D_DrawLineBox((matWorld).m, { -vf3dCubeBLCorner.x, -vf3dCubeBLCorner.y, -vf3dCubeBLCorner.z }, { 10.0f, 10.0f, 10.0f }, olc::YELLOW);
 
 
 		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
-		DrawDecal(vCenterPos - olc::vf2d(renBlackHoleEventHorizon.Sprite()->width / 2.0f, renBlackHoleEventHorizon.Sprite()->height / 2.0f), renBlackHoleEventHorizon.Decal());
+		//DrawDecal(vCenterPos - olc::vf2d(renBlackHoleDecal.Sprite()->width / 2.0f, renBlackHoleDecal.Sprite()->height / 2.0f), renBlackHoleDecal.Decal());
 
 		if (GetKey(olc::Key::R).bPressed)
 		{
