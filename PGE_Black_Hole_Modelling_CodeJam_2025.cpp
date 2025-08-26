@@ -115,8 +115,8 @@ public:
 	float fSphereRotaotionY = -1.57079633;	// Sphere start Y rotation position
 
 	// Event Horizon default properties
-	float fEventHorizonRoC = 0.5f;				 // Event Horizon Rate of Change
-	float fEventHorizonRotaotionY = 0.0f; // Event Horizon start Y rotation position
+	float fEventHorizonRoC = 0.5f;			// Event Horizon Rate of Change
+	float fEventHorizonRotaotionZ = 0.0f;	// Event Horizon start Z rotation position
 
 public:
 	// Other stuff
@@ -664,11 +664,11 @@ public:
 		// Setup Event Horizon
 		mEventHozTrans.translate(vf3dEventHorizonLocation);
 		mEventHozScale.scale(vf3dEventHorizonScale);
-		mEventHozRotationY.rotateY(-fTheta);
-		mEventHozRotationZ.rotateZ(3.14159265);
-
-		matMEventHorizon = mEventHozTrans * mEventHozScale * mEventHozRotationZ; // Rotate the Sphere into the correct North/South pole position
-		matMEventHorizon = matMEventHorizon * mEventHozRotationY;
+		mEventHozRotationY.rotateY(fTheta);
+		
+		matMEventHorizon = mEventHozTrans * mEventHozScale * mEventHozRotationY; // Rotate the Sphere into the correct North/South pole position
+		mEventHozRotationZ.rotateZ(fTheta);
+		matMEventHorizon = matMEventHorizon * mEventHozRotationZ;
 
 
 		// Setup Camera
