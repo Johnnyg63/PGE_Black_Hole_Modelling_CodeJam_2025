@@ -60,23 +60,24 @@ public:
 	// 3D Stuff
 
 	/* Matrices */
-	olc::mf4d matWorld;		// World Matrix
-	olc::mf4d matView;		// View Matrix
-	olc::mf4d matCube;		// Cube Matrix
-	olc::mf4d mSkyCube;		// Sky Cube Matrix
-	olc::mf4d matMSphere;	// Matrix for Sphere (Sun, Stars etc)
-	olc::mf4d matMBackGround; // Matrix for Background Space Grid
-	olc::mf4d matMEventHorizon; // Matrix for Event Horizon
-	olc::mf4d matProject;	// Projection Matrix
+	olc::mf4d mf4dWorld;		// World Matrix
+	olc::mf4d mf4dView;		// View Matrix
+	olc::mf4d mf4dCube;		// Cube Matrix
+	olc::mf4d mf4dSkyCube;		// Sky Cube Matrix
+	olc::mf4d mf4dSphere;	// Matrix for Sphere (Sun, Stars etc)
+	olc::mf4d mf4dBackGround; // Matrix for Background Space Grid
+	olc::mf4d mf4dEventHorizon; // Matrix for Event Horizon
+	olc::mf4d mf4dGravityGrid;	// Matrix for Gravity Grid
+	olc::mf4d mf4dProject;	// Projection Matrix
 
 	/* Meshes */
 	olc::utils::hw3d::mesh meshSpaceGrid;	// Space Grid Mesh
-	olc::utils::hw3d::mesh matSanityCube;	// Sanity Cube Mesh
-	olc::utils::hw3d::mesh matSkyCube;		// Sky Cube Mesh
-	olc::utils::hw3d::mesh matSphere;		// Sphere Mesh (black hole, Sun, Stars etc)
-	olc::utils::hw3d::mesh matEventHorizon; // Event Horizon Mesh
-	olc::utils::hw3d::mesh matBlackHole;	// Black Hole Mesh
-	olc::utils::hw3d::mesh matBackGround; // Black Hole Decal Mesh
+	olc::utils::hw3d::mesh meshSanityCube;	// Sanity Cube Mesh
+	olc::utils::hw3d::mesh meshSkyCube;		// Sky Cube Mesh
+	olc::utils::hw3d::mesh meshSphere;		// Sphere Mesh (black hole, Sun, Stars etc)
+	olc::utils::hw3d::mesh meshEventHorizon; // Event Horizon Mesh
+	olc::utils::hw3d::mesh meshBlackHole;	// Black Hole Mesh
+	olc::utils::hw3d::mesh meshBackGround; // Black Hole Decal Mesh
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
@@ -400,8 +401,8 @@ public:
 	void Load3DObjects()
 	{
 		// Load any 3D objects here
-		matWorld.identity();
-		matView.identity();
+		mf4dWorld.identity();
+		mf4dView.identity();
 
 		auto t = olc::utils::hw3d::LoadObj("assets/objectfiles/mountains.obj");
 		if (t.has_value())
@@ -410,11 +411,11 @@ public:
 		}
 		
 		// Create required matrices
-		matSphere = olc::utils::hw3d::CreateSphere(); // Default sphere
-		matSkyCube = olc::utils::hw3d::CreateCube(olc::utils::hw3d::LEFT_CROSS_TEXTURE_RECT_MAP); // Default SkyCube
-		matEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32); // Default Event Horizon
-		matBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK); // Default Black Hole
-		matBackGround = olc::utils::hw3d::CreateSphere(); // Default sphere for background
+		meshSphere = olc::utils::hw3d::CreateSphere(); // Default sphere
+		meshSkyCube = olc::utils::hw3d::CreateCube(olc::utils::hw3d::LEFT_CROSS_TEXTURE_RECT_MAP); // Default SkyCube
+		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32); // Default Event Horizon
+		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK); // Default Black Hole
+		meshBackGround = olc::utils::hw3d::CreateSphere(); // Default sphere for background
 
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
@@ -422,6 +423,7 @@ public:
 		renSkyCube.Load("assets/images/spacetexture.png");
 		renBlackHoleDecal = CreateBlackHoleEventHorizon(1.0f);
 		renBackGround.Load("assets/images/starmap_2020_4k.png");
+
 		/*auto skyCubeImage = CreateLeftCrossTextMapImage(
 			"assets/images/skybox_left.png",
 			"assets/images/skybox_top.png",
@@ -620,8 +622,6 @@ public:
 		Load3DObjects();
 
 		// Load any sprites, decals or renderables here
-		//float fRadius = std::min(ScreenWidth(), ScreenHeight()) / 2.0f * 0.15f;
-		//renBlackHoleDecal = CreateBlackHoleEventHorizon(fRadius);
 		//renOLCPGEMobLogo.Load("assets/images/olcpgemob.png");
 		
 
@@ -653,7 +653,7 @@ public:
 		// 3D Render section
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
 		olc::mf4d mCubeTrans, mCubeScale;
-		olc::mf4d mSkyCubeTrans, mSkyCubeScale, mSkyCubeRotationX, mSkyCubeRotationY, mSkyCubeRotationZ;
+		olc::mf4d mf4dSkyCubeTrans, mf4dSkyCubeScale, mf4dSkyCubeRotationX, mf4dSkyCubeRotationY, mf4dSkyCubeRotationZ;
 		olc::mf4d mSphereTrans, mSphereScale, mSphereRotationX, mSphereRotationY, mSphereRotationZ;
 		olc::mf4d mEventHozTrans, mEventHozScale, mEventHozRotationX, mEventHozRotationY, mEventHozRotationZ;
 		olc::mf4d mPosition, mCollision;
@@ -667,14 +667,13 @@ public:
 		mEventHozRotationY.rotateY(fTheta);
 		mEventHozRotationX.rotateX(fYaw);
 		
-		matMEventHorizon = mEventHozTrans * mEventHozScale * mEventHozRotationY; // Rotate the Sphere into the correct North/South pole position
-		matMEventHorizon = matMEventHorizon * mEventHozRotationX;
+		mf4dEventHorizon = mEventHozTrans * mEventHozScale * mEventHozRotationY; // Rotate the Sphere into the correct North/South pole position
+		mf4dEventHorizon = mf4dEventHorizon * mEventHozRotationX;
 		mEventHozRotationZ.rotateZ(fTheta);
-		matMEventHorizon = matMEventHorizon * mEventHozRotationZ;
+		mf4dEventHorizon = mf4dEventHorizon * mEventHozRotationZ;
 
 
 		// Setup Camera
-		 // Create a "Point At"
 		olc::vf3d vf3dTarget = { 0,0,1 };
 
 		mRotationY.rotateY(fTheta);  // Left/Right
@@ -686,16 +685,11 @@ public:
 		Cam3D.SetPosition(vf3dCamera);
 		Cam3D.SetTarget(vf3dTarget);
 		Cam3D.Update();
-		matWorld = Cam3D.GetViewMatrix();
+		mf4dWorld = Cam3D.GetViewMatrix();
 
 		// Manage forward / backwards
 		vf3dForward = vf3dLookDir * (fForwardRoC * fElapsedTime);
 
-		// Setup SkyCube
-		/*mSkyCubeTrans.translate(vf3dSkyCubeOffset + Cam3D.GetPosition());
-		mSkyCubeScale.scale(vf3dSkyCubeScale);
-
-		mSkyCube = mSkyCubeTrans * mSkyCubeScale;*/
 
 		// Setup World Background
 		mBackGroundTrans.translate(Cam3D.GetPosition());
@@ -703,22 +697,22 @@ public:
 		mBackGroundRotationZ.rotateZ(1.606f);
 		mBackGroundRotationY.rotateY(-0.546f);
 
-		matMBackGround = mBackGroundTrans * mBackGroundScale * mBackGroundRotationY * mBackGroundRotationZ;
+		mf4dBackGround = mBackGroundTrans * mBackGroundScale * mBackGroundRotationY * mBackGroundRotationZ;
 
 
 		HW3D_Projection(Cam3D.GetProjectionMatrix().m);
 
-		HW3D_DrawObject((matWorld * matMBackGround).m, renBackGround.Decal(), matBackGround.layout, matBackGround.pos, matBackGround.uv, matBackGround.col);
+		HW3D_DrawObject((mf4dWorld * mf4dBackGround).m, renBackGround.Decal(), meshBackGround.layout, meshBackGround.pos, meshBackGround.uv, meshBackGround.col);
 
-		HW3D_DrawLine((matWorld).m, {0.0f, 0.0f, 0.0f}, {100.0f, 100.0f, 100.0f}, olc::RED);
+		HW3D_DrawLine((mf4dWorld).m, {0.0f, 0.0f, 0.0f}, {100.0f, 100.0f, 100.0f}, olc::RED);
 
 		// Draw the black hole
-		HW3D_DrawObject((matWorld * matMEventHorizon).m, nullptr, matBlackHole.layout, matBlackHole.pos, matBlackHole.uv, matBlackHole.col);
+		HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, nullptr, meshBlackHole.layout, meshBlackHole.pos, meshBlackHole.uv, meshBlackHole.col);
 
 		// Draw the Event Horizon
-		HW3D_DrawObject((matWorld * matMEventHorizon).m, renStar.Decal(), matEventHorizon.layout, matEventHorizon.pos, matEventHorizon.uv, matEventHorizon.col);
+		HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renStar.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
 
-		HW3D_DrawLineBox((matWorld).m, { -vf3dCubeBLCorner.x, -vf3dCubeBLCorner.y, -vf3dCubeBLCorner.z }, { 10.0f, 10.0f, 10.0f }, olc::YELLOW);
+		HW3D_DrawLineBox((mf4dWorld).m, { -vf3dCubeBLCorner.x, -vf3dCubeBLCorner.y, -vf3dCubeBLCorner.z }, { 10.0f, 10.0f, 10.0f }, olc::YELLOW);
 
 
 		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };

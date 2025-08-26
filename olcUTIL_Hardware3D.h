@@ -1958,6 +1958,88 @@ namespace olc::utils::hw3d
 		return m;
 	}
 
+
+    olc::utils::hw3d::mesh CreateCircleDisk(float fRadius, float thickness, int32_t nSegmentCount = 64, olc::Pixel pixelCol = olc::WHITE)
+    {
+		olc::utils::hw3d::mesh m;
+		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+			m.pos.push_back({ pos.x, pos.y, pos.z });
+			m.norm.push_back({ norm.x, norm.y, norm.z, 0 });
+			m.uv.push_back({ uv.x, uv.y });
+			m.col.push_back(col);
+			};
+
+		float r0 = fRadius - thickness * 0.5f;
+		float r1 = fRadius + thickness * 0.5f;
+
+		for (int i = 0; i < nSegmentCount; ++i)
+		{
+			float theta0 = 2.0f * M_PI * i / nSegmentCount;
+			float theta1 = 2.0f * M_PI * (i + 1) / nSegmentCount;
+
+			olc::vf3d p0 = { r0 * cos(theta0), r0 * sin(theta0), 0.0f };
+			olc::vf3d p1 = { r1 * cos(theta0), r1 * sin(theta0), 0.0f };
+			olc::vf3d p2 = { r1 * cos(theta1), r1 * sin(theta1), 0.0f };
+			olc::vf3d p3 = { r0 * cos(theta1), r0 * sin(theta1), 0.0f };
+
+			olc::vf2d uv0 = { 0.5f + 0.5f * (p0.x / fRadius), 0.5f + 0.5f * (p0.y / fRadius) };
+			olc::vf2d uv1 = { 0.5f + 0.5f * (p1.x / fRadius), 0.5f + 0.5f * (p1.y / fRadius) };
+			olc::vf2d uv2 = { 0.5f + 0.5f * (p2.x / fRadius), 0.5f + 0.5f * (p2.y / fRadius) };
+			olc::vf2d uv3 = { 0.5f + 0.5f * (p3.x / fRadius), 0.5f + 0.5f * (p3.y / fRadius) };
+
+			olc::vf3d norm = { 0, 0, 1 };
+
+			// Front face (counter-clockwise)
+			meshPushBack(p0, norm, uv0, pixelCol);
+			meshPushBack(p1, norm, uv1, pixelCol);
+			meshPushBack(p2, norm, uv2, pixelCol);
+
+			meshPushBack(p0, norm, uv0, pixelCol);
+			meshPushBack(p2, norm, uv2, pixelCol);
+			meshPushBack(p3, norm, uv3, pixelCol);
+
+			// Back face (clockwise, z = 0)
+			olc::vf3d normBack = { 0, 0, -1 };
+			meshPushBack(p0, normBack, uv0, pixelCol);
+			meshPushBack(p2, normBack, uv2, pixelCol);
+			meshPushBack(p1, normBack, uv1, pixelCol);
+
+			meshPushBack(p0, normBack, uv0, pixelCol);
+			meshPushBack(p3, normBack, uv3, pixelCol);
+			meshPushBack(p2, normBack, uv2, pixelCol);
+		}
+		return m;
+
+    }
+
+
+	olc::utils::hw3d::mesh CreateGrid(float fSize = 10.0f, int32_t nLines = 10, olc::Pixel pixelCol = olc::WHITE)
+	{
+		olc::utils::hw3d::mesh m;
+		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				m.pos.push_back({ pos.x, pos.y, pos.z });			// COORDINATES
+				m.norm.push_back({ norm.x, norm.y, norm.z, 0 });	// NORMS
+				m.uv.push_back({ uv.x, uv.y });						// TexCoord
+				m.col.push_back(col);								// COLOURS
+			};
+
+		float halfSize = fSize * 0.5f;
+		float step = fSize / nLines;
+		for (int i = 0; i <= nLines; ++i)
+		{
+			float pos = -halfSize + i * step;
+			// Lines along X axis
+			meshPushBack({ -halfSize, 0.0f, pos }, { 0, 1, 0 }, { 0, 0 }, pixelCol);
+			meshPushBack({ halfSize, 0.0f, pos }, { 0, 1, 0 }, { 1, 0 }, pixelCol);
+			// Lines along Z axis
+			meshPushBack({ pos, 0.0f, -halfSize }, { 0, 1, 0 }, { 0, 1 }, pixelCol);
+			meshPushBack({ pos, 0.0f, halfSize }, { 0, 1, 0 }, { 1, 1 }, pixelCol);
+		}
+		return m;
+	}
+
 	// End John Galvin
 
 	class Camera3D
