@@ -77,7 +77,8 @@ public:
 	olc::utils::hw3d::mesh meshSphere;		// Sphere Mesh (black hole, Sun, Stars etc)
 	olc::utils::hw3d::mesh meshEventHorizon; // Event Horizon Mesh
 	olc::utils::hw3d::mesh meshBlackHole;	// Black Hole Mesh
-	olc::utils::hw3d::mesh meshBackGround; // Black Hole Decal Mesh
+	olc::utils::hw3d::mesh meshBackGround;	// Background Space Grid mesh
+	olc::utils::hw3d::mesh meshGravityGrid;	// Gravity Grid Mesh
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
@@ -113,9 +114,13 @@ public:
 	olc::vd3d vf3dEventHorizonLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
 	olc::vd3d vf3dEventHorizonOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
 
-	olc::vf3d vf3dBackGroundScale = { 600.0f, 600.0f, 600.0f };    // vf3d BackGround Scale (in sort its Size)
-	olc::vf3d vf3dSBackGroundLocation = { 0.0f, 0.0f, 0.0f };		// vf3d BackGround Location 
-	olc::vf3d vf3dBackGroundOffset = { 0.0f, 0.0f, 0.0f };// vf3d BackGround Offset
+	olc::vf3d vf3dBackGroundScale = { 600.0f, 600.0f, 600.0f }; // vf3d BackGround Scale (in sort its Size)
+	olc::vf3d vf3dSBackGroundLocation = { 0.0f, 0.0f, 0.0f };	// vf3d BackGround Location 
+	olc::vf3d vf3dBackGroundOffset = { 0.0f, 0.0f, 0.0f };		// vf3d BackGround Offset
+
+	olc::vf3d vf3dGravityGridScale = { 10.0f, 10.0f, 10.0f };		// vf3d Gravity Grid Scale (in sort its Size)
+	olc::vf3d vf3dGravityGridLocation = { 0.0f, -2.5f, 0.0f };	// vf3d Gravity Grid Location
+	olc::vf3d vf3dGravityGridOffset = { 0.0f, 0.0f, 0.0f };		// vf3d Gravity Grid Offset
 	
 
 	// Sphere default properties
@@ -411,18 +416,18 @@ public:
 		}
 		
 		// Create required matrices
-		meshSphere = olc::utils::hw3d::CreateSphere(); // Default sphere
-		meshSkyCube = olc::utils::hw3d::CreateCube(olc::utils::hw3d::LEFT_CROSS_TEXTURE_RECT_MAP); // Default SkyCube
-		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32); // Default Event Horizon
-		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK); // Default Black Hole
-		meshBackGround = olc::utils::hw3d::CreateSphere(); // Default sphere for background
+		meshSphere = olc::utils::hw3d::CreateSphere();								// Default sphere
+		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);		// Default Event Horizon
+		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
+		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
+		meshGravityGrid = olc::utils::hw3d::CreateGrid(1.0f, 30);					// Default Grid
 
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
 		renEventHorizon.Load("assets/images/NASA_2020_4k.jpg");
 		renSkyCube.Load("assets/images/spacetexture.png");
 		renBlackHoleDecal = CreateBlackHoleEventHorizon(1.0f);
-		renBackGround.Load("assets/images/starmap_2020_4k.png");
+		renBackGround.Load("assets/images/starmap_2020_4k_updated.png");
 
 		/*auto skyCubeImage = CreateLeftCrossTextMapImage(
 			"assets/images/skybox_left.png",
@@ -659,6 +664,7 @@ public:
 		olc::mf4d mPosition, mCollision;
 		olc::mf4d mMovement, mOffset;
 		olc::mf4d mBackGroundTrans, mBackGroundScale, mBackGroundRotationX, mBackGroundRotationY, mBackGroundRotationZ;
+		olc::mf4d mGravityGridTrans, mGravityGridScale, mGravityGridRotationX, mGravityGridRotationY, mGravityGridRotationZ;
 
 
 		// Setup Event Horizon
@@ -672,6 +678,13 @@ public:
 		mEventHozRotationZ.rotateZ(fTheta);
 		mf4dEventHorizon = mf4dEventHorizon * mEventHozRotationZ;
 
+		// Setup Grid
+		mGravityGridTrans.translate(vf3dGravityGridLocation);
+		mGravityGridScale.scale(vf3dGravityGridScale);
+		// As the grid is flat we only need to rotate on the X axis
+		mGravityGridRotationX.rotateX(0.17079633f);
+
+		mf4dGravityGrid = mGravityGridTrans * mGravityGridScale;// *mGravityGridRotationX;
 
 		// Setup Camera
 		olc::vf3d vf3dTarget = { 0,0,1 };
@@ -699,18 +712,26 @@ public:
 
 		mf4dBackGround = mBackGroundTrans * mBackGroundScale * mBackGroundRotationY * mBackGroundRotationZ;
 
-
+		// Set our projection matrix
 		HW3D_Projection(Cam3D.GetProjectionMatrix().m);
 
+		// Draw the Background Shere
 		HW3D_DrawObject((mf4dWorld * mf4dBackGround).m, renBackGround.Decal(), meshBackGround.layout, meshBackGround.pos, meshBackGround.uv, meshBackGround.col);
-
-		HW3D_DrawLine((mf4dWorld).m, {0.0f, 0.0f, 0.0f}, {100.0f, 100.0f, 100.0f}, olc::RED);
+				
 
 		// Draw the black hole
 		HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, nullptr, meshBlackHole.layout, meshBlackHole.pos, meshBlackHole.uv, meshBlackHole.col);
 
 		// Draw the Event Horizon
 		HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renStar.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
+
+
+		// Draw the Gravity Grid
+		HW3D_DrawObject((mf4dWorld * mf4dGravityGrid).m, nullptr, meshGravityGrid.layout, meshGravityGrid.pos, meshGravityGrid.uv, meshGravityGrid.col);
+
+
+		// dRAW SOME LINES AND BOXES FOR DEBUGGING
+		HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { 100.0f, 100.0f, 100.0f }, olc::RED);
 
 		HW3D_DrawLineBox((mf4dWorld).m, { -vf3dCubeBLCorner.x, -vf3dCubeBLCorner.y, -vf3dCubeBLCorner.z }, { 10.0f, 10.0f, 10.0f }, olc::YELLOW);
 

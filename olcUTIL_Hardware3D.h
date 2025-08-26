@@ -2037,8 +2037,11 @@ namespace olc::utils::hw3d
 			meshPushBack({ pos, 0.0f, -halfSize }, { 0, 1, 0 }, { 0, 1 }, pixelCol);
 			meshPushBack({ pos, 0.0f, halfSize }, { 0, 1, 0 }, { 1, 1 }, pixelCol);
 		}
+		m.layout = olc::DecalStructure::LINE;
 		return m;
 	}
+
+
 
 	// End John Galvin
 
