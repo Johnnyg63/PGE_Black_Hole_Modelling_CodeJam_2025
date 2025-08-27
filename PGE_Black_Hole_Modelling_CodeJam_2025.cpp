@@ -401,19 +401,22 @@ public:
     }
 		
 
-	void RayStep3D(Ray3D& ray, double d, double rs) {
-		// 1) integrate (r,φ,dr,dφ)
+    void RayStep3D(Ray3D& ray, double d, double rs) {
+		// 1) integrate (r, theta, phi, dr, dtheta, dphi)
 		if (ray.r <= rs) return; // stop if inside the event horizon
 		rk4Step3D(ray, d, rs);
 
-		// 2) convert back to cartesian x,y, TODO rework this to use 2D vectors properly
-		ray.WorldViewPosition.x = ray.r * cos(ray.phi);
-		ray.WorldViewPosition.y = ray.r * sin(ray.phi);
+		// 2) convert back to cartesian x, y, z using spherical coordinates
+		// x = r * sin(theta) * cos(phi)
+		// y = r * sin(theta) * sin(phi)
+		// z = r * cos(theta)
+		ray.WorldViewPosition.x = ray.r * sin(ray.theta) * cos(ray.phi);
+		ray.WorldViewPosition.y = ray.r * sin(ray.theta) * sin(ray.phi);
 		ray.WorldViewPosition.z = ray.r * cos(ray.theta);
 
 		// 3) record the trail
 		ray.viewPortTrail.push_back(ConvertWorldViewPosToViewPortPos(ray.WorldViewPosition));
-	}
+    }
 
     olc::vd3d ConvertWorldViewPosToViewPortPos(const olc::vd3d& worldPos) {
 		
@@ -591,29 +594,42 @@ public:
 	* The rk4Step function implements a single step of the Runge-Kutta 4th order method to update the state of a Ray object
 	* based on its current properties and a given time step.
 	*/
-	void rk4Step3D(Ray3D& ray, double d, double rs)
-	{
-		double y0[4] = { ray.r, ray.phi, ray.dr, ray.dphi };
-		double k1[4], k2[4], k3[4], k4[4], temp[4];
+    // Updated RK4 step for 3D geodesics (r, theta, phi, dr, dtheta, dphi)
+    void rk4Step3D(Ray3D& ray, double d, double rs)
+    {
+        // State vector: [r, theta, phi, dr, dtheta, dphi]
+        double y0[6] = { ray.r, ray.theta, ray.phi, ray.dr, ray.dtheta, ray.dphi };
+        double k1[6], k2[6], k3[6], k4[6], temp[6];
 
-		geodesicRHS3D(ray, k1, rs);
-		addState3D(y0, k1, d / 2.0, temp);
-		Ray3D r2 = ray; r2.r = temp[0]; r2.phi = temp[1]; r2.dr = temp[2]; r2.dphi = temp[3];
-		geodesicRHS3D(r2, k2, rs);
+        geodesicRHS3D(ray, k1, rs);
+        for (int i = 0; i < 6; ++i) temp[i] = y0[i] + k1[i] * (d / 2.0);
+        Ray3D r2 = ray;
+        r2.r = temp[0]; r2.theta = temp[1]; r2.phi = temp[2];
+        r2.dr = temp[3]; r2.dtheta = temp[4]; r2.dphi = temp[5];
+        geodesicRHS3D(r2, k2, rs);
 
-		addState2D(y0, k2, d / 2.0, temp);
-		Ray3D r3 = ray; r3.r = temp[0]; r3.phi = temp[1]; r3.dr = temp[2]; r3.dphi = temp[3];
-		geodesicRHS3D(r3, k3, rs);
+        for (int i = 0; i < 6; ++i) temp[i] = y0[i] + k2[i] * (d / 2.0);
+        Ray3D r3 = ray;
+        r3.r = temp[0]; r3.theta = temp[1]; r3.phi = temp[2];
+        r3.dr = temp[3]; r3.dtheta = temp[4]; r3.dphi = temp[5];
+        geodesicRHS3D(r3, k3, rs);
 
-		addState2D(y0, k3, d, temp);
-		Ray3D r4 = ray; r4.r = temp[0]; r4.phi = temp[1]; r4.dr = temp[2]; r4.dphi = temp[3];
-		geodesicRHS3D(r4, k4, rs);
+        for (int i = 0; i < 6; ++i) temp[i] = y0[i] + k3[i] * d;
+        Ray3D r4 = ray;
+        r4.r = temp[0]; r4.theta = temp[1]; r4.phi = temp[2];
+        r4.dr = temp[3]; r4.dtheta = temp[4]; r4.dphi = temp[5];
+        geodesicRHS3D(r4, k4, rs);
 
-		ray.r += (d / 6.0) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
-		ray.phi += (d / 6.0) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
-		ray.dr += (d / 6.0) * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2]);
-		ray.dphi += (d / 6.0) * (k1[3] + 2 * k2[3] + 2 * k3[3] + k4[3]);
-	}
+        for (int i = 0; i < 6; ++i)
+            y0[i] += (d / 6.0) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]);
+
+        ray.r = y0[0];
+        ray.theta = y0[1];
+        ray.phi = y0[2];
+        ray.dr = y0[3];
+        ray.dtheta = y0[4];
+        ray.dphi = y0[5];
+    }
 
 	/* End 3D Light Rays*/
 
