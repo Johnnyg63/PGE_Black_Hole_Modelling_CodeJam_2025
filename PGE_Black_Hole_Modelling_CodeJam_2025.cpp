@@ -318,7 +318,7 @@ public:
 	void RayStep2D(Ray2D& ray, double d, double rs) {
 		// 1) integrate (r,φ,dr,dφ)
 		if (ray.r <= rs) return; // stop if inside the event horizon
-		rk4Step(ray, d, rs);
+		rk4Step2D(ray, d, rs);
 
 		// 2) convert back to cartesian x,y, TODO rework this to use 2D vectors properly
 		ray.Position.x = ray.r * cos(ray.phi);
@@ -372,11 +372,12 @@ public:
 public:
 	// Some functions to help with the physics
 
+	/* 2D Light Rays*/
 	/*
 	* The geodesicRHS function computes the right-hand side of the geodesic equations for a given ray in a Schwarzschild spacetime, 
 	* updating the provided rhs array with derivatives of the ray's position and angular momentum.
 	*/
-	void geodesicRHS(const Ray2D& ray, double rhs[4], double rs) 
+	void geodesicRHS2D(const Ray2D& ray, double rhs[4], double rs) 
 	{
 		double r = ray.r;
 		double dr = ray.dr;
@@ -401,7 +402,7 @@ public:
 		rhs[3] = -2.0 * dr * dphi / r;
 	}
 
-	void addState(const double a[4], const double b[4], double factor, double out[4])
+	void addState2D(const double a[4], const double b[4], double factor, double out[4])
 	{
 		for (int i = 0; i < 4; i++)
 			out[i] = a[i] + b[i] * factor;
@@ -411,29 +412,99 @@ public:
 	* The rk4Step function implements a single step of the Runge-Kutta 4th order method to update the state of a Ray object 
 	* based on its current properties and a given time step.
 	*/
-	void rk4Step(Ray2D& ray, double d, double rs) 
+	void rk4Step2D(Ray2D& ray, double d, double rs) 
 	{
 		double y0[4] = { ray.r, ray.phi, ray.dr, ray.dphi };
 		double k1[4], k2[4], k3[4], k4[4], temp[4];
 
-		geodesicRHS(ray, k1, rs);
-		addState(y0, k1, d / 2.0, temp);
+		geodesicRHS2D(ray, k1, rs);
+		addState2D(y0, k1, d / 2.0, temp);
 		Ray2D r2 = ray; r2.r = temp[0]; r2.phi = temp[1]; r2.dr = temp[2]; r2.dphi = temp[3];
-		geodesicRHS(r2, k2, rs);
+		geodesicRHS2D(r2, k2, rs);
 
-		addState(y0, k2, d / 2.0, temp);
+		addState2D(y0, k2, d / 2.0, temp);
 		Ray2D r3 = ray; r3.r = temp[0]; r3.phi = temp[1]; r3.dr = temp[2]; r3.dphi = temp[3];
-		geodesicRHS(r3, k3, rs);
+		geodesicRHS2D(r3, k3, rs);
 
-		addState(y0, k3, d, temp);
+		addState2D(y0, k3, d, temp);
 		Ray2D r4 = ray; r4.r = temp[0]; r4.phi = temp[1]; r4.dr = temp[2]; r4.dphi = temp[3];
-		geodesicRHS(r4, k4, rs);
+		geodesicRHS2D(r4, k4, rs);
 
 		ray.r += (d / 6.0) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
 		ray.phi += (d / 6.0) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
 		ray.dr += (d / 6.0) * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2]);
 		ray.dphi += (d / 6.0) * (k1[3] + 2 * k2[3] + 2 * k3[3] + k4[3]);
 	}
+
+	/* End 2D Light Rays*/
+
+
+
+	/* 3D Light Rays*/
+	/*
+	* The geodesicRHS function computes the right-hand side of the geodesic equations for a given ray in a Schwarzschild spacetime,
+	* updating the provided rhs array with derivatives of the ray's position and angular momentum.
+	*/
+	void geodesicRHS3D(const Ray3D& ray, double rhs[4], double rs)
+	{
+		double r = ray.r;
+		double dr = ray.dr;
+		double dphi = ray.dphi;
+		double E = ray.E;
+
+		double f = 1.0 - rs / r;
+
+		// dr/dλ = dr
+		rhs[0] = dr;
+		// dφ/dλ = dphi
+		rhs[1] = dphi;
+
+		// d²r/dλ² from Schwarzschild null geodesic:
+		double dt_d = E / f;
+		rhs[2] =
+			-(rs / (2 * r * r)) * f * (dt_d * dt_d)
+			+ (rs / (2 * r * r * f)) * (dr * dr)
+			+ (r - rs) * (dphi * dphi);
+
+		// d²φ/dλ² = -2*(dr * dphi) / r
+		rhs[3] = -2.0 * dr * dphi / r;
+	}
+
+	void addState3D(const double a[4], const double b[4], double factor, double out[4])
+	{
+		for (int i = 0; i < 4; i++)
+			out[i] = a[i] + b[i] * factor;
+	}
+
+	/*
+	* The rk4Step function implements a single step of the Runge-Kutta 4th order method to update the state of a Ray object
+	* based on its current properties and a given time step.
+	*/
+	void rk4Step3D(Ray3D& ray, double d, double rs)
+	{
+		double y0[4] = { ray.r, ray.phi, ray.dr, ray.dphi };
+		double k1[4], k2[4], k3[4], k4[4], temp[4];
+
+		geodesicRHS3D(ray, k1, rs);
+		addState3D(y0, k1, d / 2.0, temp);
+		Ray3D r2 = ray; r2.r = temp[0]; r2.phi = temp[1]; r2.dr = temp[2]; r2.dphi = temp[3];
+		geodesicRHS3D(r2, k2, rs);
+
+		addState2D(y0, k2, d / 2.0, temp);
+		Ray3D r3 = ray; r3.r = temp[0]; r3.phi = temp[1]; r3.dr = temp[2]; r3.dphi = temp[3];
+		geodesicRHS3D(r3, k3, rs);
+
+		addState2D(y0, k3, d, temp);
+		Ray3D r4 = ray; r4.r = temp[0]; r4.phi = temp[1]; r4.dr = temp[2]; r4.dphi = temp[3];
+		geodesicRHS3D(r4, k4, rs);
+
+		ray.r += (d / 6.0) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
+		ray.phi += (d / 6.0) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+		ray.dr += (d / 6.0) * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2]);
+		ray.dphi += (d / 6.0) * (k1[3] + 2 * k2[3] + 2 * k3[3] + k4[3]);
+	}
+
+	/* End 2D Light Rays*/
 
 	/*
 	* Returns the center point of a cube given its bottom-left corner and side length.
