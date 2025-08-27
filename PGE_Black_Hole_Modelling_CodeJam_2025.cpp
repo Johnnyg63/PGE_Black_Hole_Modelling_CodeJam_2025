@@ -38,9 +38,9 @@ olc::vd3d vd2dConstLightDirZ = { 0.0, 0.0, C };// Const Initial direction of the
 const double dKMtoMeters = 1e+3;		// Conversion factor from kilometers to meters
 const double dMetersToKM = 1e-3;		// Conversion factor from meters to kilometers
 const double dScreenMToWorldVM = 1e+11;	// Conversion factor from Screen meters to WorldView Meters(1e11 meters)
-double WorldWidth = 0;					// Width of the viewport in meters  
-double WorldHeight = 0;					// Height of the viewport in meters
-
+double WorldX = 0;					// Width of the viewport in meters  
+double WorldY = 0;					// Height of the viewport in meters
+double WorldZ = 0;					// Deph of the viewport in meters
                      
 
 #define OLC_PGEX_SPLASHSCREEN		// Manages the GPL-3.0 Licence requirements 
@@ -65,14 +65,14 @@ public:
 
 	/* Matrices */
 	olc::mf4d mf4dWorld;		// World Matrix
-	olc::mf4d mf4dView;		// View Matrix
-	olc::mf4d mf4dCube;		// Cube Matrix
+	olc::mf4d mf4dView;			// View Matrix
+	olc::mf4d mf4dCube;			// Cube Matrix
 	olc::mf4d mf4dSkyCube;		// Sky Cube Matrix
-	olc::mf4d mf4dSphere;	// Matrix for Sphere (Sun, Stars etc)
-	olc::mf4d mf4dBackGround; // Matrix for Background Space Grid
+	olc::mf4d mf4dSphere;		// Matrix for Sphere (Sun, Stars etc)
+	olc::mf4d mf4dBackGround;	// Matrix for Background Space Grid
 	olc::mf4d mf4dEventHorizon; // Matrix for Event Horizon
 	olc::mf4d mf4dGravityGrid;	// Matrix for Gravity Grid
-	olc::mf4d mf4dProject;	// Projection Matrix
+	olc::mf4d mf4dProject;		// Projection Matrix
 
 	/* Meshes */
 	olc::utils::hw3d::mesh meshSpaceGrid;	// Space Grid Mesh
@@ -261,7 +261,7 @@ public:
 		}
 	};
 
-
+	std::vector<Ray3D> rays3D;
 
 	PGEBlackHole SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass); // Sagittarius A* black hole
 
@@ -290,8 +290,8 @@ public:
 		float alpha = 1.0f;
 
 		for (const auto& ray : rays) {
-			screenX = int32_t((ray.Position.x / WorldWidth + 0.5) * ScreenWidth());
-			screenY = int32_t((ray.Position.y / WorldHeight + 0.5) * ScreenHeight());
+			screenX = int32_t((ray.Position.x / WorldX + 0.5) * ScreenWidth());
+			screenY = int32_t((ray.Position.y / WorldZ + 0.5) * ScreenHeight());
 			DrawLineDecal(centreScreenPos, { screenX, screenY }, olc::WHITE);
 			DrawLineDecal({ screenX, screenY }, { screenX + 1, screenY }, olc::WHITE);
 			//Draw(screenX, screenY, olc::WHITE);
@@ -306,8 +306,8 @@ public:
 				// older points (i=0) get alpha≈0, newer get alpha≈1
 				alpha = float(i) / float(N - 1);
 				// convert world coords to screen coords
-				screenX = int32_t((ray.trail[i].x / WorldWidth + 0.5) * ScreenWidth());
-				screenY = int32_t((ray.trail[i].y / WorldHeight + 0.5) * ScreenHeight());
+				screenX = int32_t((ray.trail[i].x / WorldX + 0.5) * ScreenWidth());
+				screenY = int32_t((ray.trail[i].y / WorldY + 0.5) * ScreenHeight());
 				DrawLineDecal({ screenX, screenY }, { screenX + 1, screenY }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
 
 			}
@@ -328,7 +328,61 @@ public:
 		ray.trail.push_back(ray.Position);
 	}
 
+	void DrawRays3D(const std::vector<Ray3D>& rays) {
+		// draw current ray positions as points
+		float screenX = 0;
+		float screenY = 0;
+		float screenZ = 0;
+		float LastScreenX = 0;
+		float LastScreenY = 0;
+		float LastScreenZ = 0;
+		float alpha = 1.0f;
 
+		for (const auto& ray : rays) {
+			screenX = int32_t((ray.Position.x / WorldX + 0.5) * ScreenWidth()) / 100.0f;	//TODO fix this  /100.0f is a hack to scale down the large values
+			screenY = int32_t((ray.Position.y / WorldY + 0.5) * ScreenHeight()) / 100.0f;	// TODO do we really need to add 0.5? the numbers are so large
+			screenY = int32_t((ray.Position.z / WorldZ + 0.5) * ScreenWidth()) / 100.0f;	// A little hacky but we need our z to map to screen x so our gravity well looks correct
+			
+			HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { screenX, screenY, screenZ }, olc::YELLOW);
+
+		}
+
+		// draw each trail with fading alpha
+		for (const auto& ray : rays) {
+			size_t N = ray.trail.size();
+			if (N < 2) continue;
+
+			// we draw lines between the points so we start at i=1 to i-1, inshort we draw lines in reverse order
+			for (size_t i = 1; i < N; ++i) {
+				// older points (i=0) get alpha≈0, newer get alpha≈1
+  				alpha = float(i) / float(N - 1);
+				// convert world coords to screen coords
+				screenX = int32_t((ray.trail[i].x / WorldX + 0.5) * ScreenWidth()) / 100.0f;
+				screenY = int32_t((ray.trail[i].y / WorldY + 0.5) * ScreenHeight()) / 100.0f;
+				screenZ = int32_t((ray.trail[i].z / WorldY + 0.5) * ScreenHeight()) / 100.0f;
+				LastScreenX = int32_t((ray.trail[i-1].x / WorldX + 0.5) * ScreenWidth()) / 100.0f;
+				LastScreenY = int32_t((ray.trail[i-1].y / WorldY + 0.5) * ScreenHeight()) / 100.0f;
+				LastScreenZ = int32_t((ray.trail[i-1].z / WorldY + 0.5) * ScreenHeight()) / 100.0f;
+				HW3D_DrawLine((mf4dWorld).m, { screenX, screenY, screenZ }, { LastScreenX, LastScreenY, LastScreenZ }, olc::DARK_BLUE);
+				HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { LastScreenX, LastScreenY, LastScreenZ }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
+
+			}
+
+		}
+
+	}
+	void RayStep3D(Ray3D& ray, double d, double rs) {
+		// 1) integrate (r,φ,dr,dφ)
+		if (ray.r <= rs) return; // stop if inside the event horizon
+		rk4Step3D(ray, d, rs);
+
+		// 2) convert back to cartesian x,y, TODO rework this to use 2D vectors properly
+		ray.Position.x = ray.r * cos(ray.phi);
+		ray.Position.y = ray.r * sin(ray.phi);
+
+		// 3) record the trail
+		ray.trail.push_back(ray.Position);
+	}
 
 	olc::Sprite* CreateLeftCrossTextMapImage(
 		std::string left, std::string top,
@@ -504,7 +558,7 @@ public:
 		ray.dphi += (d / 6.0) * (k1[3] + 2 * k2[3] + 2 * k3[3] + k4[3]);
 	}
 
-	/* End 2D Light Rays*/
+	/* End 3D Light Rays*/
 
 	/*
 	* Returns the center point of a cube given its bottom-left corner and side length.
@@ -728,8 +782,9 @@ public:
 	{
 
 		// Setup up worldview parameters
-		WorldWidth = double((ScreenWidth() * 2.0) / dKMtoMeters)* dScreenMToWorldVM;	// Width of the WorldView in meters
-		WorldHeight = double((ScreenHeight() * 2.0) / dKMtoMeters) * dScreenMToWorldVM;	// Height of the WorldView in meters
+		WorldX = double((ScreenWidth() * 2.0) / dKMtoMeters)* dScreenMToWorldVM;	// Width of the WorldView in meters
+		WorldY = double((ScreenHeight() * 2.0) / dKMtoMeters) * dScreenMToWorldVM;	// Height of the WorldView in meters
+		WorldZ = WorldX; // a little hacky but we what our graviry grid to be square, hence WorldX = WorldZ
 
 		// Setup 3D Camera
 		float fAspect = float(GetScreenSize().x) / float(GetScreenSize().y); // Width / height 
@@ -749,7 +804,7 @@ public:
 		Load3DObjects();
 
 		// Load any sprites, decals or renderables here
-		//renOLCPGEMobLogo.Load("assets/images/olcpgemob.png");
+		//renOLCPGEMobLogo.Load("assets/images/olcpgemob.png");  //TODO add logo
 		
 
 		/*
@@ -863,14 +918,14 @@ public:
 
 		if (GetKey(olc::Key::R).bPressed)
 		{
-			rays2D.clear();
-			rays2D.push_back(Ray2D(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
+			rays3D.clear();
+			rays3D.push_back(Ray3D(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
 		}
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
-			for (auto& ray : rays2D) {
-				RayStep2D(ray, 1.0f, SagittariusA.r_s);
-				DrawRays2D(rays2D);
+			for (auto& ray : rays3D) {
+				RayStep3D(ray, 1.0f, SagittariusA.r_s);
+				DrawRays3D(rays3D);
 			}
 
 		}
