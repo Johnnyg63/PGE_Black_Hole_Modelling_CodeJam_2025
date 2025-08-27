@@ -993,11 +993,12 @@ public:
 		{
 			rays3D.clear();
 			rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDir, SagittariusA));
+			rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirZ, SagittariusA));
 		}
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
 			for (auto& ray : rays3D) {
-				RayStep3D(ray, 1.0f, SagittariusA.r_s);
+    			RayStep3D(ray, 1.0f, SagittariusA.r_s);
 				DrawRays3D(rays3D);
 			}
 
