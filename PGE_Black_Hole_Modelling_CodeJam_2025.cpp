@@ -358,7 +358,7 @@ public:
 			screenY = ray.ViewPortPosition.y; //(ray.Position.y * invWorldY) * screenH * scale;
 			screenZ = ray.ViewPortPosition.z; //(ray.Position.z * invWorldZ) * screenH * scale;
 
-			HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { screenX, screenY, screenZ }, olc::YELLOW);
+			//HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { screenX, screenY, screenZ }, olc::YELLOW);
 		}
 
 		DrawRays3D_Threaded(rays);
@@ -385,9 +385,10 @@ public:
 				const auto& lp = ray.viewPortTrail[i - 1];
 
 				{
-					std::lock_guard<std::mutex> lock(draw_mutex);
-					HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { lp.x, lp.y, lp.z }, olc::DARK_BLUE);
-					HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { lp.x, lp.y, lp.z }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
+					//std::lock_guard<std::mutex> lock(draw_mutex);
+					HW3D_DrawLine((mf4dWorld).m, { lp.x + 0.001f, lp.y, lp.z }, { lp.x + 1.0f, lp.y, lp.z }, olc::YELLOW);
+					//HW3D_DrawLineBox((mf4dWorld).m, { lp.x, lp.y, lp.z }, { 0.01f, 0.01f, 0.01f }, olc::YELLOW);
+					//HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { lp.x, lp.y, lp.z }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
 				}
 			}
 
@@ -992,17 +993,26 @@ public:
 		if (GetKey(olc::Key::R).bPressed)
 		{
 			rays3D.clear();
-			rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDir, SagittariusA));
 			rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirZ, SagittariusA));
+			/*rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirY, SagittariusA));
+			rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirZ, SagittariusA));*/
 		}
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
-			for (auto& ray : rays3D) {
-    			RayStep3D(ray, 1.0f, SagittariusA.r_s);
-				DrawRays3D(rays3D);
-			}
+			
+				for (size_t i = 0; i < 60000; i++)
+				{
+					for (auto& ray : rays3D) {
+						RayStep3D(ray, 1.0f, SagittariusA.r_s);
+					}
+				}
+    			
+			
+			
 
 		}
+
+		DrawRays3D(rays3D);
 
 		if (GetKey(olc::Key::ESCAPE).bPressed)
 		{
