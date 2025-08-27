@@ -403,19 +403,15 @@ public:
 		
 
     void RayStep3D(Ray3D& ray, double d, double rs) {
-		// 1) integrate (r, theta, phi, dr, dtheta, dphi)
+		
+
 		if (ray.r <= rs) return; // stop if inside the event horizon
 		rk4Step3D(ray, d, rs);
 
-		// 2) convert back to cartesian x, y, z using spherical coordinates
-		// x = r * sin(theta) * cos(phi)
-		// y = r * sin(theta) * sin(phi)
-		// z = r * cos(theta)
 		ray.WorldViewPosition.x = ray.r * sin(ray.theta) * cos(ray.phi);
 		ray.WorldViewPosition.y = ray.r * sin(ray.theta) * sin(ray.phi);
 		ray.WorldViewPosition.z = ray.r * cos(ray.theta);
 
-		// 3) record the trail
 		ray.viewPortTrail.push_back(ConvertWorldViewPosToViewPortPos(ray.WorldViewPosition));
     }
 
@@ -1000,7 +996,7 @@ public:
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
 			
-				for (size_t i = 0; i < 60000; i++)
+				for (size_t i = 0; i < 10000; i++)
 				{
 					for (auto& ray : rays3D) {
 						RayStep3D(ray, 1.0f, SagittariusA.r_s);
