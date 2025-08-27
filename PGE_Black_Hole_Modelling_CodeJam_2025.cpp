@@ -31,6 +31,10 @@ olc::vd3d vd2dLoopyLoop = { -1e+11, 3.13106302719999999e+10, 0.0 };
 
 olc::vd3d vd2dConstLightDir = { C, 0.0, 0.0 };// Const Initial direction of the light ray (pointing right along the x-axis)
 
+olc::vd3d vd2dConstLightDirX = { C, 0.0, 0.0 };// Const Initial direction of the light ray (pointing right along the x-axis)
+olc::vd3d vd2dConstLightDirY = { 0.0, C, 0.0 };// Const Initial direction of the light ray (pointing up along the y-axis)
+olc::vd3d vd2dConstLightDirZ = { 0.0, 0.0, C };// Const Initial direction of the light ray (pointing up along the z-axis)
+
 const double dKMtoMeters = 1e+3;		// Conversion factor from kilometers to meters
 const double dMetersToKM = 1e-3;		// Conversion factor from meters to kilometers
 const double dScreenMToWorldVM = 1e+11;	// Conversion factor from Screen meters to WorldView Meters(1e11 meters)
@@ -162,6 +166,7 @@ public:
 	/* END Screen Messages */
 
 	olc::vi2d centreScreenPos;
+	bool Gravity = false;
 
 public:
 
@@ -180,7 +185,7 @@ public:
 		}
 	};
 
-	struct Ray {
+	struct Ray2D {
 		olc::vd3d Position;				// Current position in Cartesian coordinates
 		olc::vd3d Direction;			// Direction vector (velocity in Cartesian)
 		olc::vd3d Polar;				// Polar coordinates (r, phi)
@@ -193,7 +198,7 @@ public:
 		double E;		// Energy 
 		double L;		// Angular momentum
 
-		Ray(olc::vd3d position, olc::vd3d direction, PGEBlackHole blackhole)
+		Ray2D(olc::vd3d position, olc::vd3d direction, PGEBlackHole blackhole)
 			: Position(position), Direction(direction), Polar(position.polar())
 		{
 			// Convert to polar coordinates
@@ -215,7 +220,48 @@ public:
 		}
 	};
 	
-	std::vector<Ray> rays;
+	std::vector<Ray2D> rays2D;
+
+	struct Ray3D {
+		olc::vd3d Position;				// Current position in Cartesian coordinates
+		olc::vd3d Direction;			// Direction vector (velocity in Cartesian)
+		olc::vd3d Polar;				// Polar coordinates (r, phi)
+		std::vector<olc::vd3d> trail;	// Trail of positions
+
+		double r;		// Radius (magnitude of pos)
+		double theta;	// Angle from z-axis
+		double dtheta;	// Angle from z-axis velocity
+		double phi;		// Angle from origin
+		double dr;		// Radial velocity
+		double dphi;	// Angular velocity
+		double E;		// Energy 
+		double L;		// Angular momentum
+
+		Ray3D(olc::vd3d position, olc::vd3d direction, PGEBlackHole blackhole)
+			: Position(position), Direction(direction), Polar(position.polar())
+		{
+			// Convert to polar coordinates
+			r = Polar.x;
+			theta = Polar.y;
+			phi = Polar.z;
+
+			// Convert direction to polar velocities
+			float dx = Direction.x, dy = Direction.y, dz = Direction.z;
+			
+			dtheta = (cos(theta) * cos(phi) * dx + cos(theta) * sin(phi) * dy - sin(theta) * dz) / r;
+			dphi = (-sin(phi) * dx + cos(phi) * dy) / (r * sin(theta));
+
+			L = r * r * sin(theta) * dphi;
+			double f = 1.0 - blackhole.r_s / r;
+			float dt_dL = sqrt((dr * dr) / f + r * r * (dtheta * dtheta + sin(theta) * sin(theta) * dphi * dphi));
+			E = f * dt_dL;
+
+			// Initialize trail
+			trail.push_back(Position);
+		}
+	};
+
+
 
 	PGEBlackHole SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass); // Sagittarius A* black hole
 
@@ -237,7 +283,7 @@ public:
 		return ren;
 	}
 
-	void DrawRays(const std::vector<Ray>& rays) {
+	void DrawRays2D(const std::vector<Ray2D>& rays) {
 		// draw current ray positions as points
 		float screenX = 0;
 		float screenY = 0;
@@ -269,7 +315,7 @@ public:
 		}
 
 	}
-	void RayStep(Ray& ray, double d, double rs) {
+	void RayStep2D(Ray2D& ray, double d, double rs) {
 		// 1) integrate (r,φ,dr,dφ)
 		if (ray.r <= rs) return; // stop if inside the event horizon
 		rk4Step(ray, d, rs);
@@ -281,6 +327,7 @@ public:
 		// 3) record the trail
 		ray.trail.push_back(ray.Position);
 	}
+
 
 
 	olc::Sprite* CreateLeftCrossTextMapImage(
@@ -329,7 +376,7 @@ public:
 	* The geodesicRHS function computes the right-hand side of the geodesic equations for a given ray in a Schwarzschild spacetime, 
 	* updating the provided rhs array with derivatives of the ray's position and angular momentum.
 	*/
-	void geodesicRHS(const Ray& ray, double rhs[4], double rs) 
+	void geodesicRHS(const Ray2D& ray, double rhs[4], double rs) 
 	{
 		double r = ray.r;
 		double dr = ray.dr;
@@ -364,22 +411,22 @@ public:
 	* The rk4Step function implements a single step of the Runge-Kutta 4th order method to update the state of a Ray object 
 	* based on its current properties and a given time step.
 	*/
-	void rk4Step(Ray& ray, double d, double rs) 
+	void rk4Step(Ray2D& ray, double d, double rs) 
 	{
 		double y0[4] = { ray.r, ray.phi, ray.dr, ray.dphi };
 		double k1[4], k2[4], k3[4], k4[4], temp[4];
 
 		geodesicRHS(ray, k1, rs);
 		addState(y0, k1, d / 2.0, temp);
-		Ray r2 = ray; r2.r = temp[0]; r2.phi = temp[1]; r2.dr = temp[2]; r2.dphi = temp[3];
+		Ray2D r2 = ray; r2.r = temp[0]; r2.phi = temp[1]; r2.dr = temp[2]; r2.dphi = temp[3];
 		geodesicRHS(r2, k2, rs);
 
 		addState(y0, k2, d / 2.0, temp);
-		Ray r3 = ray; r3.r = temp[0]; r3.phi = temp[1]; r3.dr = temp[2]; r3.dphi = temp[3];
+		Ray2D r3 = ray; r3.r = temp[0]; r3.phi = temp[1]; r3.dr = temp[2]; r3.dphi = temp[3];
 		geodesicRHS(r3, k3, rs);
 
 		addState(y0, k3, d, temp);
-		Ray r4 = ray; r4.r = temp[0]; r4.phi = temp[1]; r4.dr = temp[2]; r4.dphi = temp[3];
+		Ray2D r4 = ray; r4.r = temp[0]; r4.phi = temp[1]; r4.dr = temp[2]; r4.dphi = temp[3];
 		geodesicRHS(r4, k4, rs);
 
 		ray.r += (d / 6.0) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
@@ -399,6 +446,8 @@ public:
 		corner.z = centerpos.z + sideLength / 2.0f;
 		return corner;
 	}
+
+
 
 public:
 
@@ -420,7 +469,9 @@ public:
 		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);		// Default Event Horizon
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
-		meshGravityGrid = olc::utils::hw3d::CreateGrid(1.0f, 30);					// Default Grid
+		//meshGravityGrid = olc::utils::hw3d::CreateGrid(1.0f, 30);					// Default Grid
+		meshGravityGrid = olc::utils::hw3d::CreateGrid(25.0f, 50);
+
 
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
@@ -642,7 +693,7 @@ public:
 		*/
 		SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass);
 
-		rays.push_back(Ray(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
+		rays2D.push_back(Ray2D(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
 
 		// Create the Black Hole Sphere
 
@@ -741,14 +792,14 @@ public:
 
 		if (GetKey(olc::Key::R).bPressed)
 		{
-			rays.clear();
-			rays.push_back(Ray(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
+			rays2D.clear();
+			rays2D.push_back(Ray2D(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
 		}
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
-			for (auto& ray : rays) {
-				RayStep(ray, 1.0f, SagittariusA.r_s);
-				DrawRays(rays);
+			for (auto& ray : rays2D) {
+				RayStep2D(ray, 1.0f, SagittariusA.r_s);
+				DrawRays2D(rays2D);
 			}
 
 		}
