@@ -7,7 +7,9 @@
 #include <immintrin.h>			
 #define _USE_MATH_DEFINES 
 #include <cmath>				
-#include <vector>				
+#include <vector>	
+#include <mutex>
+#include <thread>
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif // M_PI
@@ -27,7 +29,7 @@ const double dSagittariusAMass = 4.1e+6 * dSolarMass; // Mass of Sagittarius A* 
 double dArbitraryfactor = 2.5;			// Arbitrary factor for visualization of event horizon
 
 // The Light Ray initial position and direction that will loop around the black hole
-olc::vd3d vd2dLoopyLoop = { -1e+11, 3.13106302719999999e+10, 0.0 };
+olc::vd3d vd2dLoopyLoop = { -1e+11, 3.13106302719999999e+10, 1e+11};
 
 olc::vd3d vd2dConstLightDir = { C, 0.0, 0.0 };// Const Initial direction of the light ray (pointing right along the x-axis)
 
@@ -41,7 +43,10 @@ const double dScreenMToWorldVM = 1e+11;	// Conversion factor from Screen meters 
 double WorldX = 0;					// Width of the viewport in meters  
 double WorldY = 0;					// Height of the viewport in meters
 double WorldZ = 0;					// Deph of the viewport in meters
-                     
+         
+
+// Mutex for thread safety
+std::mutex draw_mutex;
 
 #define OLC_PGEX_SPLASHSCREEN		// Manages the GPL-3.0 Licence requirements 
 #include "olcPGEX_SplashScreen.h"
@@ -223,10 +228,11 @@ public:
 	std::vector<Ray2D> rays2D;
 
 	struct Ray3D {
-		olc::vd3d Position;				// Current position in Cartesian coordinates
-		olc::vd3d Direction;			// Direction vector (velocity in Cartesian)
-		olc::vd3d Polar;				// Polar coordinates (r, phi)
-		std::vector<olc::vd3d> trail;	// Trail of positions
+		olc::vd3d WorldViewPosition;			// Current position in Cartesian coordinates
+		olc::vf3d ViewPortPosition;				// Current position projected to 3D view port
+		olc::vd3d Direction;					// Direction vector (velocity in Cartesian)
+		olc::vd3d Polar;						// Polar coordinates (r, phi)
+		std::vector<olc::vf3d> viewPortTrail;	// Trail of positions projected to 3D view port smaller numbers
 
 		double r;		// Radius (magnitude of pos)
 		double theta;	// Angle from z-axis
@@ -237,8 +243,8 @@ public:
 		double E;		// Energy 
 		double L;		// Angular momentum
 
-		Ray3D(olc::vd3d position, olc::vd3d direction, PGEBlackHole blackhole)
-			: Position(position), Direction(direction), Polar(position.polar())
+		Ray3D(olc::vd3d worldViewPosition, olc::vf3d viewportPosition, olc::vd3d direction, PGEBlackHole blackhole)
+			: WorldViewPosition(worldViewPosition), ViewPortPosition(viewportPosition), Direction(direction), Polar(worldViewPosition.polar())
 		{
 			// Convert to polar coordinates
 			r = Polar.x;
@@ -253,11 +259,12 @@ public:
 
 			L = r * r * sin(theta) * dphi;
 			double f = 1.0 - blackhole.r_s / r;
-			float dt_dL = sqrt((dr * dr) / f + r * r * (dtheta * dtheta + sin(theta) * sin(theta) * dphi * dphi));
+			double dt_dL = sqrt((dr * dr) / f + r * r * (dtheta * dtheta + sin(theta) * sin(theta) * dphi * dphi));
 			E = f * dt_dL;
 
 			// Initialize trail
-			trail.push_back(Position);
+			//worldVTrail.push_back(worldViewPosition);
+			viewPortTrail.push_back(viewportPosition);
 		}
 	};
 
@@ -337,52 +344,102 @@ public:
 		float LastScreenY = 0;
 		float LastScreenZ = 0;
 		float alpha = 1.0f;
+		// Precompute screen size and scale factors
+		const float screenW = float(ScreenWidth());
+		const float screenH = float(ScreenHeight());
+		const float invWorldX = 1.0f / float(WorldX);
+		const float invWorldY = 1.0f / float(WorldY);
+		const float invWorldZ = 1.0f / float(WorldZ);
+		const float scale = 0.01f;
 
 		for (const auto& ray : rays) {
-			screenX = int32_t((ray.Position.x / WorldX + 0.5) * ScreenWidth()) / 100.0f;	//TODO fix this  /100.0f is a hack to scale down the large values
-			screenY = int32_t((ray.Position.y / WorldY + 0.5) * ScreenHeight()) / 100.0f;	// TODO do we really need to add 0.5? the numbers are so large
-			screenY = int32_t((ray.Position.z / WorldZ + 0.5) * ScreenWidth()) / 100.0f;	// A little hacky but we need our z to map to screen x so our gravity well looks correct
-			
-			HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { screenX, screenY, screenZ }, olc::YELLOW);
+			// Map world coordinates to screen space and apply scale
+			screenX = ray.ViewPortPosition.x; //(ray.WorldViewPosition.x * invWorldX) * screenW * scale;
+			screenY = ray.ViewPortPosition.y; //(ray.Position.y * invWorldY) * screenH * scale;
+			screenZ = ray.ViewPortPosition.z; //(ray.Position.z * invWorldZ) * screenH * scale;
 
+			HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { screenX, screenY, screenZ }, olc::YELLOW);
 		}
 
-		// draw each trail with fading alpha
-		for (const auto& ray : rays) {
-			size_t N = ray.trail.size();
-			if (N < 2) continue;
+		DrawRays3D_Threaded(rays);
+	}
 
-			// we draw lines between the points so we start at i=1 to i-1, inshort we draw lines in reverse order
+    void DrawRays3D_Threaded(const std::vector<Ray3D>& rays) 
+	{
+		const float screenW = float(ScreenWidth());
+		const float screenH = float(ScreenHeight());
+		const float invWorldX = 1.0f / float(WorldX);
+		const float invWorldY = 1.0f / float(WorldY);
+		const float invWorldZ = 1.0f / float(WorldZ);
+		const float scale = 0.01f;
+
+		std::mutex draw_mutex;
+		auto draw_trail = [&](const Ray3D& ray) {
+			size_t N = ray.viewPortTrail.size();
+			if (N < 2) return;
+
 			for (size_t i = 1; i < N; ++i) {
-				// older points (i=0) get alpha≈0, newer get alpha≈1
-  				alpha = float(i) / float(N - 1);
-				// convert world coords to screen coords
-				screenX = int32_t((ray.trail[i].x / WorldX + 0.5) * ScreenWidth()) / 100.0f;
-				screenY = int32_t((ray.trail[i].y / WorldY + 0.5) * ScreenHeight()) / 100.0f;
-				screenZ = int32_t((ray.trail[i].z / WorldY + 0.5) * ScreenHeight()) / 100.0f;
-				LastScreenX = int32_t((ray.trail[i-1].x / WorldX + 0.5) * ScreenWidth()) / 100.0f;
-				LastScreenY = int32_t((ray.trail[i-1].y / WorldY + 0.5) * ScreenHeight()) / 100.0f;
-				LastScreenZ = int32_t((ray.trail[i-1].z / WorldY + 0.5) * ScreenHeight()) / 100.0f;
-				HW3D_DrawLine((mf4dWorld).m, { screenX, screenY, screenZ }, { LastScreenX, LastScreenY, LastScreenZ }, olc::DARK_BLUE);
-				HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { LastScreenX, LastScreenY, LastScreenZ }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
+				float alpha = float(i) / float(N - 1);
 
+				const auto& p = ray.viewPortTrail[i];
+				const auto& lp = ray.viewPortTrail[i - 1];
+
+				{
+					std::lock_guard<std::mutex> lock(draw_mutex);
+					HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { lp.x, lp.y, lp.z }, olc::DARK_BLUE);
+					HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { lp.x, lp.y, lp.z }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
+				}
 			}
 
-		}
+		};
 
-	}
+		std::vector<std::thread> threads;
+		for (const auto& ray : rays) {
+			threads.emplace_back(draw_trail, std::ref(ray));
+		}
+		for (auto& t : threads) t.join();
+    }
+		
+
 	void RayStep3D(Ray3D& ray, double d, double rs) {
 		// 1) integrate (r,φ,dr,dφ)
 		if (ray.r <= rs) return; // stop if inside the event horizon
 		rk4Step3D(ray, d, rs);
 
 		// 2) convert back to cartesian x,y, TODO rework this to use 2D vectors properly
-		ray.Position.x = ray.r * cos(ray.phi);
-		ray.Position.y = ray.r * sin(ray.phi);
+		ray.WorldViewPosition.x = ray.r * cos(ray.phi);
+		ray.WorldViewPosition.y = ray.r * sin(ray.phi);
+		ray.WorldViewPosition.z = ray.r * cos(ray.theta);
 
 		// 3) record the trail
-		ray.trail.push_back(ray.Position);
+		ray.viewPortTrail.push_back(ConvertWorldViewPosToViewPortPos(ray.WorldViewPosition));
 	}
+
+    olc::vd3d ConvertWorldViewPosToViewPortPos(const olc::vd3d& worldPos) {
+		
+		const float invWorldVM = 1.0f / float(dScreenMToWorldVM);
+		const float screenW = float(ScreenWidth());
+		const float screenH = float(ScreenHeight());
+		const float scale = 0.01f;
+
+		const float x = float(worldPos.x) * invWorldVM * screenW * scale;
+		const float y = float(worldPos.y) * invWorldVM * screenH * scale;
+		const float z = float(worldPos.z) * invWorldVM * screenW * scale;
+		return { x, y, z };
+    }
+
+    olc::vd3d ConvertViewPortPosToWorldViewPos(const olc::vd3d& viewPortPos) {
+		const float invScreenW = 1.0f / float(ScreenWidth());
+		const float invScreenH = 1.0f / float(ScreenHeight());
+		const float scale = 0.01f;
+		const double factorW = dScreenMToWorldVM * invScreenW / scale;
+		const double factorH = dScreenMToWorldVM * invScreenH / scale;
+		return {
+			viewPortPos.x * factorW,
+			viewPortPos.y * factorH,
+			viewPortPos.z * factorW
+		};
+    }
 
 	olc::Sprite* CreateLeftCrossTextMapImage(
 		std::string left, std::string top,
@@ -919,7 +976,7 @@ public:
 		if (GetKey(olc::Key::R).bPressed)
 		{
 			rays3D.clear();
-			rays3D.push_back(Ray3D(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
+			rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDir, SagittariusA));
 		}
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
