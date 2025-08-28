@@ -271,6 +271,8 @@ public:
 
 	std::vector<Ray3D> rays3D;
 
+	std::vector<std::pair<olc::vf3d, int32_t>> finalRayPoints; // Points in the gravity grid
+
 	PGEBlackHole SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass); // Sagittarius A* black hole
 
 
@@ -358,6 +360,38 @@ public:
 	}
 
 
+	// Removes tail rays that are outside of the X/Y bounds to optimize rendering
+	void RemoveTrailRays3D(std::vector<Ray3D>& rays) {
+		for (auto& ray : rays) {
+			size_t N = ray.viewPortTrail.size();
+			if (N < 2) return;
+
+			for (size_t i = 1; i < N; ++i) {
+				
+				const auto& p = ray.viewPortTrail[i];
+				if (std::abs(p.x) < 1.0)
+				{
+					finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
+				}
+				if (std::abs(p.y) < 1.0)
+				{
+					finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
+				}
+				
+			}
+		}
+	}
+
+	// Draws all final ray points in 3D space
+	void DrawFinalRayPoints()
+	{
+		for (const auto& p : finalRayPoints)
+		{
+			HW3D_DrawLineBox((mf4dWorld).m, { p.first.x, p.first.y, p.first.z }, { 0.001f, 0.001f, 0.001f }, p.second);
+		}
+		
+	}
+
 	// Draws all rays and trail rays in 3D space using multithreading
     void DrawRays3Ds_Threaded(const std::vector<Ray3D>& rays) 
 	{
@@ -377,17 +411,17 @@ public:
 				float alpha = float(i) / float(N - 1);
 
 				const auto& p = ray.viewPortTrail[i];
-				const auto& lp = ray.viewPortTrail[i - 1];
 
 				{
 					std::lock_guard<std::mutex> lock(draw_mutex);
-					if (std::abs(lp.x) < 1.0)
+					if (std::abs(p.x) < 1.0)
 					{
-						HW3D_DrawLine((mf4dWorld).m, { lp.x + 0.001f, lp.y, lp.z }, { lp.x + 1.0f, lp.y, lp.z }, ray.Colour);
+
+						HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { p.x, p.y + 0.01f, p.z }, ray.Colour);
 					}
-					if (std::abs(lp.y) < 1.0)
+					if (std::abs(p.y) < 1.0)
 					{
-						HW3D_DrawLine((mf4dWorld).m, { lp.x + 0.001f, lp.y, lp.z }, { lp.x + 1.0f, lp.y, lp.z }, olc::RED);
+						HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { p.x + 0.01f, p.y, p.z }, olc::RED);
 					}
 					
 					//HW3D_DrawLineBox((mf4dWorld).m, { lp.x, lp.y, lp.z }, { 0.01f, 0.01f, 0.01f }, olc::YELLOW);
@@ -996,19 +1030,23 @@ public:
 			//rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirY, SagittariusA, olc::RED.n));
 			//rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirZ, SagittariusA));
 		}
-		if (GetKey(olc::Key::SPACE).bHeld)
+		if (GetKey(olc::Key::SPACE).bPressed)
 		{
 			// creates 10,000 rays 
-			for (size_t i = 0; i < 10000; i++)
+			for (size_t i = 0; i < 30000; i++)
 			{
 				for (auto& ray : rays3D) {
 					RayStep3D(ray, 1.0f, SagittariusA.r_s);
 				}
 			}
+
+			RemoveTrailRays3D(rays3D);
     			
 		}
 
-		DrawRays3Ds_Threaded(rays3D);
+		// DrawRays3Ds_Threaded(rays3D);
+
+		DrawFinalRayPoints();
 
 		if (GetKey(olc::Key::ESCAPE).bPressed)
 		{
