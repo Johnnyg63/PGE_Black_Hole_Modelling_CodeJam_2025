@@ -387,7 +387,7 @@ public:
 	{
 		for (const auto& p : finalRayPoints)
 		{
-			HW3D_DrawLineBox((mf4dWorld).m, { p.first.x, p.first.y, p.first.z }, { 0.001f, 0.001f, 0.001f }, p.second);
+			HW3D_DrawLine((mf4dWorld).m, { p.first.x, p.first.y, p.first.z }, { p.first.x + 0.01f, p.first.y, p.first.z }, p.second);
 		}
 		
 	}
@@ -419,13 +419,16 @@ public:
 
 						HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { p.x, p.y + 0.01f, p.z }, ray.Colour);
 					}
-					if (std::abs(p.y) < 1.0)
+					else if (std::abs(p.y) < 1.0)
 					{
 						HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { p.x + 0.01f, p.y, p.z }, olc::RED);
 					}
+					else
+					{
+						HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { p.x + 0.01f, p.y, p.z }, olc::WHITE);
+					}
 					
-					//HW3D_DrawLineBox((mf4dWorld).m, { lp.x, lp.y, lp.z }, { 0.01f, 0.01f, 0.01f }, olc::YELLOW);
-					//HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { lp.x, lp.y, lp.z }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
+					
 				}
 			}
 
@@ -1044,9 +1047,9 @@ public:
     			
 		}
 
-		// DrawRays3Ds_Threaded(rays3D);
+		DrawRays3Ds_Threaded(rays3D);
 
-		DrawFinalRayPoints();
+		//DrawFinalRayPoints();
 
 		if (GetKey(olc::Key::ESCAPE).bPressed)
 		{
