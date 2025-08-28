@@ -381,7 +381,15 @@ public:
 
 				{
 					std::lock_guard<std::mutex> lock(draw_mutex);
-					HW3D_DrawLine((mf4dWorld).m, { lp.x + 0.001f, lp.y, lp.z }, { lp.x + 1.0f, lp.y, lp.z }, ray.Colour);
+					if (std::abs(lp.x) < 1.0)
+					{
+						HW3D_DrawLine((mf4dWorld).m, { lp.x + 0.001f, lp.y, lp.z }, { lp.x + 1.0f, lp.y, lp.z }, ray.Colour);
+					}
+					if (std::abs(lp.y) < 1.0)
+					{
+						HW3D_DrawLine((mf4dWorld).m, { lp.x + 0.001f, lp.y, lp.z }, { lp.x + 1.0f, lp.y, lp.z }, olc::RED);
+					}
+					
 					//HW3D_DrawLineBox((mf4dWorld).m, { lp.x, lp.y, lp.z }, { 0.01f, 0.01f, 0.01f }, olc::YELLOW);
 					//HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { lp.x, lp.y, lp.z }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
 				}
