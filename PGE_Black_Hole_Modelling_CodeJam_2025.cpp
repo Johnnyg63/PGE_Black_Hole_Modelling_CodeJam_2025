@@ -119,7 +119,7 @@ public:
 	olc::vf3d vf3dBlackHoleLocation = { 0.0f, 0.0f, 0.0f };		// vf3d Black hole Location 
 	olc::vf3d vf3dBlackHoleOffset = { 0.0f, 0.0f, 0.0f };		// vf3d black hole Offset
 
-	olc::vd3d vf3dEventHorizonScale = { 1.0f, 1.0f, 1.0f };		// vf3d Event Horizon Scale (in sort its Size)
+	olc::vd3d vf3dEventHorizonScale = { 10.0f, 10.0f, 10.0f };		// vf3d Event Horizon Scale (in sort its Size)
 	olc::vd3d vf3dEventHorizonLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
 	olc::vd3d vf3dEventHorizonOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
 
@@ -233,6 +233,7 @@ public:
 		olc::vd3d Direction;					// Direction vector (velocity in Cartesian)
 		olc::vd3d Polar;						// Polar coordinates (r, phi)
 		std::vector<olc::vf3d> viewPortTrail;	// Trail of positions projected to 3D view port smaller numbers
+		int32_t Colour;
 
 		double r;		// Radius (magnitude of pos)
 		double theta;	// Angle from z-axis
@@ -243,8 +244,8 @@ public:
 		double E;		// Energy 
 		double L;		// Angular momentum
 
-		Ray3D(olc::vd3d worldViewPosition, olc::vf3d viewportPosition, olc::vd3d direction, PGEBlackHole blackhole)
-			: WorldViewPosition(worldViewPosition), ViewPortPosition(viewportPosition), Direction(direction), Polar(worldViewPosition.polar())
+		Ray3D(olc::vd3d worldViewPosition, olc::vf3d viewportPosition, olc::vd3d direction, PGEBlackHole blackhole, int32_t colour = olc::WHITE.n)
+			: WorldViewPosition(worldViewPosition), ViewPortPosition(viewportPosition), Direction(direction), Colour(colour), Polar(worldViewPosition.polar())
 		{
 			// Convert to polar coordinates
 			r = Polar.x;
@@ -335,7 +336,9 @@ public:
 		ray.trail.push_back(ray.Position);
 	}
 
-	void DrawRays3D(const std::vector<Ray3D>& rays) {
+
+	// Draws a single ray in 3D space
+	void DrawRay3D(const Ray3D& ray) {
 		// draw current ray positions as points
 		float screenX = 0;
 		float screenY = 0;
@@ -344,27 +347,19 @@ public:
 		float LastScreenY = 0;
 		float LastScreenZ = 0;
 		float alpha = 1.0f;
-		// Precompute screen size and scale factors
-		const float screenW = float(ScreenWidth());
-		const float screenH = float(ScreenHeight());
-		const float invWorldX = 1.0f / float(WorldX);
-		const float invWorldY = 1.0f / float(WorldY);
-		const float invWorldZ = 1.0f / float(WorldZ);
-		const float scale = 0.01f;
 
-		//for (const auto& ray : rays) {
-		//	// Map world coordinates to screen space and apply scale
-		//	screenX = ray.ViewPortPosition.x; //(ray.WorldViewPosition.x * invWorldX) * screenW * scale;
-		//	screenY = ray.ViewPortPosition.y; //(ray.Position.y * invWorldY) * screenH * scale;
-		//	screenZ = ray.ViewPortPosition.z; //(ray.Position.z * invWorldZ) * screenH * scale;
+		screenX = ray.ViewPortPosition.x; 
+		screenY = ray.ViewPortPosition.y; 
+		screenZ = ray.ViewPortPosition.z; 
 
-		//	//HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { screenX, screenY, screenZ }, olc::YELLOW);
-		//}
+		HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { screenX, screenY, screenZ }, olc::YELLOW);
 
-		DrawRays3D_Threaded(rays);
+
 	}
 
-    void DrawRays3D_Threaded(const std::vector<Ray3D>& rays) 
+
+	// Draws all rays and trail rays in 3D space using multithreading
+    void DrawRays3Ds_Threaded(const std::vector<Ray3D>& rays) 
 	{
 		const float screenW = float(ScreenWidth());
 		const float screenH = float(ScreenHeight());
@@ -385,8 +380,8 @@ public:
 				const auto& lp = ray.viewPortTrail[i - 1];
 
 				{
-					//std::lock_guard<std::mutex> lock(draw_mutex);
-					HW3D_DrawLine((mf4dWorld).m, { lp.x + 0.001f, lp.y, lp.z }, { lp.x + 1.0f, lp.y, lp.z }, olc::YELLOW);
+					std::lock_guard<std::mutex> lock(draw_mutex);
+					HW3D_DrawLine((mf4dWorld).m, { lp.x + 0.001f, lp.y, lp.z }, { lp.x + 1.0f, lp.y, lp.z }, ray.Colour);
 					//HW3D_DrawLineBox((mf4dWorld).m, { lp.x, lp.y, lp.z }, { 0.01f, 0.01f, 0.01f }, olc::YELLOW);
 					//HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { lp.x, lp.y, lp.z }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
 				}
@@ -989,26 +984,23 @@ public:
 		if (GetKey(olc::Key::R).bPressed)
 		{
 			rays3D.clear();
-			rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirZ, SagittariusA));
-			/*rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirY, SagittariusA));
-			rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirZ, SagittariusA));*/
+			rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
+			//rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirY, SagittariusA, olc::RED.n));
+			//rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirZ, SagittariusA));
 		}
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
-			
-				for (size_t i = 0; i < 10000; i++)
-				{
-					for (auto& ray : rays3D) {
-						RayStep3D(ray, 1.0f, SagittariusA.r_s);
-					}
+			// creates 10,000 rays 
+			for (size_t i = 0; i < 10000; i++)
+			{
+				for (auto& ray : rays3D) {
+					RayStep3D(ray, 1.0f, SagittariusA.r_s);
 				}
+			}
     			
-			
-			
-
 		}
 
-		DrawRays3D(rays3D);
+		DrawRays3Ds_Threaded(rays3D);
 
 		if (GetKey(olc::Key::ESCAPE).bPressed)
 		{
