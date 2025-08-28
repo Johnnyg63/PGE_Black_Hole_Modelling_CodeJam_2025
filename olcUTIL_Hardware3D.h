@@ -95,6 +95,7 @@
 #include <numbers>
 #include <optional>
 #include <sstream>
+#include <functional>
 #define _USE_MATH_DEFINES 
 #include <cmath>							
 #ifndef M_PI
@@ -2371,5 +2372,52 @@ namespace olc::utils::hw3d
 		float fAngle1 = 0.0f;
 		float fAngle2 = 0.0f;
 		olc::vf2d vSpin;
+	};
+}
+
+
+// Thanks Copilot, Johnnyg63 and Template Classes do not mix well
+
+
+// Hash functions for olc::vi3d
+namespace std {
+	template <>
+	struct hash<olc::vi3d> {
+		std::size_t operator()(const olc::vi3d& v) const noexcept {
+			std::size_t h1 = std::hash<int32_t>{}(v.x);
+			std::size_t h2 = std::hash<int32_t>{}(v.y);
+			std::size_t h3 = std::hash<int32_t>{}(v.z);
+			// Combine the hashes
+			return h1 ^ (h2 << 1) ^ (h3 << 2);
+		}
+	};
+}
+
+
+// Hash functions for olc::vd3d
+namespace std {
+	template <>
+	struct hash<olc::vd3d> {
+		std::size_t operator()(const olc::vd3d& v) const noexcept {
+			std::size_t h1 = std::hash<double>{}(v.x);
+			std::size_t h2 = std::hash<double>{}(v.y);
+			std::size_t h3 = std::hash<double>{}(v.z);
+			// Combine the hashes
+			return h1 ^ (h2 << 1) ^ (h3 << 2);
+		}
+	};
+}
+
+// Hash functions for olc::vf3d
+namespace std {
+	template <>
+	struct hash<olc::vf3d> {
+		std::size_t operator()(const olc::vf3d& v) const noexcept {
+			std::size_t h1 = std::hash<float>{}(v.x);
+			std::size_t h2 = std::hash<float>{}(v.y);
+			std::size_t h3 = std::hash<float>{}(v.z);
+			// Combine the hashes
+			return h1 ^ (h2 << 1) ^ (h3 << 2);
+		}
 	};
 }
