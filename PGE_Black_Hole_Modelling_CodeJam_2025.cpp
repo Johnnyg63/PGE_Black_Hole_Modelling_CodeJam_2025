@@ -352,14 +352,14 @@ public:
 		const float invWorldZ = 1.0f / float(WorldZ);
 		const float scale = 0.01f;
 
-		for (const auto& ray : rays) {
-			// Map world coordinates to screen space and apply scale
-			screenX = ray.ViewPortPosition.x; //(ray.WorldViewPosition.x * invWorldX) * screenW * scale;
-			screenY = ray.ViewPortPosition.y; //(ray.Position.y * invWorldY) * screenH * scale;
-			screenZ = ray.ViewPortPosition.z; //(ray.Position.z * invWorldZ) * screenH * scale;
+		//for (const auto& ray : rays) {
+		//	// Map world coordinates to screen space and apply scale
+		//	screenX = ray.ViewPortPosition.x; //(ray.WorldViewPosition.x * invWorldX) * screenW * scale;
+		//	screenY = ray.ViewPortPosition.y; //(ray.Position.y * invWorldY) * screenH * scale;
+		//	screenZ = ray.ViewPortPosition.z; //(ray.Position.z * invWorldZ) * screenH * scale;
 
-			//HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { screenX, screenY, screenZ }, olc::YELLOW);
-		}
+		//	//HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { screenX, screenY, screenZ }, olc::YELLOW);
+		//}
 
 		DrawRays3D_Threaded(rays);
 	}
