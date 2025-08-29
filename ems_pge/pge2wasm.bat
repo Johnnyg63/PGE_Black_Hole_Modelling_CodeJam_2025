@@ -65,10 +65,10 @@ goto :error
 echo %CPP%
 	if exist ".\assets" (
 		echo Starting Build with assets... Johnngy63 THANK YOU To @Bixxy 
-		call em++ -std=c++20 -O2 -s FORCE_FILESYSTEM=1 -s ALLOW_MEMORY_GROWTH=1 -s MAX_WEBGL_VERSION=2 -s MIN_WEBGL_VERSION=2 -s USE_FREETYPE=1 -s USE_LIBPNG=1 --preload-file .\assets\images\@./assets/images/ %CPP% -o .\WASM\pge.html -I %OLCPGE%
+		call em++ -std=c++20 -Oz -s FORCE_FILESYSTEM=1 -s ALLOW_MEMORY_GROWTH=1 -s MAX_WEBGL_VERSION=2 -s MIN_WEBGL_VERSION=2 -s USE_FREETYPE=1 -s USE_LIBPNG=1 --preload-file .\assets\images\@./assets/images/ %CPP% -o .\WASM\pge.html -I %OLCPGE%
 	) else (
 		echo Starting Build without assets...
-		call em++ -std=c++20 -O2 -s ALLOW_MEMORY_GROWTH=1 -s MAX_WEBGL_VERSION=2 -s MIN_WEBGL_VERSION=2 -s USE_LIBPNG=1 %CPP% -o .\WASM\pge.html -I %OLCPGE%
+		call em++ -std=c++20 -Oz -s ALLOW_MEMORY_GROWTH=1 -s MAX_WEBGL_VERSION=2 -s MIN_WEBGL_VERSION=2 -s USE_LIBPNG=1 %CPP% -o .\WASM\pge.html -I %OLCPGE%
 	)
 	
 	echo Build Completed
