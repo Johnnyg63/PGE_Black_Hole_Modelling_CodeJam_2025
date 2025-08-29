@@ -159,6 +159,7 @@ public:
 	olc::Renderable renBlackHoleDecal;			// Black Hole Decal Renderable
 	olc::Renderable renEventHorizon;			// Event Horizon Renderable
 	olc::Renderable renBackGround;				// Background Renderable
+	olc::Renderable renBackGround2D;			// 2D Background Renderable
 	/* End Reneders */
 
 	/* Vectors */
@@ -287,8 +288,8 @@ public:
 		bool bShowGravityGrid = true;		// Show/Hide Gravity Gride
 		bool bShowBlackHole = true;			// Show/Hide Black Hole Center
 		bool bShowEventHorizon = true;		// Show/Hide Event Horizon
-		bool bShowXYLightGrid = true;		// Show/Hide XY Light Grid
-		bool bShowFullGrid = false;			// Show/Hide Full Grid
+		bool bShowXYLightGrid = false;		// Show/Hide XY Light Grid
+		bool bShowFullLightGrid = false;	// Show/Hide Full Grid
 		bool bShowXDisk = false;			// Show/Hide X Disk
 		bool bShowYDisk = false;			// Show/Hide Y Disk
 		bool bShowSun = false;				// Show/Hide Sun
@@ -307,7 +308,7 @@ public:
 		ren.Create((radius * 2) + 2, (radius * 2) + 2);
 		SetDrawTarget(ren.Sprite());
 		Clear(olc::BLANK);
-		FillCircle(radius, radius, radius, olc::DARK_YELLOW);
+		FillCircle(radius, radius, radius, olc::GREY);
 		FillCircle(radius, radius, radius - 1.0f, olc::BLACK);
 		SetDrawTarget(nullptr);
 		ren.Decal()->Update();
@@ -772,7 +773,8 @@ public:
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
 		renEventHorizon.Load("assets/images/NASA_2020_4k.jpg");
 		renSkyCube.Load("assets/images/spacetexture.png");
-		renBlackHoleDecal = CreateBlackHoleEventHorizon(10.0f);
+		renBlackHoleDecal = CreateBlackHoleEventHorizon(15.0f);
+		renBackGround2D.Load("assets/images/MilkyWay2D.jpg");
 		renBackGround.Load("assets/images/starmap_2020_4k_updated.png");
 
 		/*auto skyCubeImage = CreateLeftCrossTextMapImage(
@@ -1063,14 +1065,15 @@ public:
 		AddMessage(sMenuMessage);
 		sMenuMessage = "Press R to reset ray";
 		AddMessage(sMenuMessage);
-		sMenuMessage = "Press Spacebar pause/run the light ray";
+		sMenuMessage = "Press Spacebar run/pause the light ray";
 		AddMessage(sMenuMessage);
 		sMenuMessage = "---";
 		AddMessage(sMenuMessage);
 
-
+		DrawDecal({ 0.0f, 0.0f }, renBackGround2D.Decal());
 		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
 		DrawDecal(vCenterPos - olc::vf2d(renBlackHoleDecal.Sprite()->width / 2.0f, renBlackHoleDecal.Sprite()->height / 2.0f), renBlackHoleDecal.Decal());
+		
 
 		if (GetKey(olc::Key::R).bPressed)
 		{
@@ -1087,10 +1090,10 @@ public:
 		{
 			for (auto& ray : rays2D) {
 				RayStep2D(ray, 1.0f, SagittariusA.r_s);
-				DrawRays2D(rays2D);
+				
 			}
 		}
-
+		DrawRays2D(rays2D);
 	}
 
 	// Shows the 3D world 
@@ -1203,7 +1206,38 @@ public:
 
 		}
 
-		DrawRays3Ds_Threaded(rays3D);
+		if (sHideShowMenu.bShowFullLightGrid)
+		{
+			sHideShowMenu.bShowXYLightGrid = false;
+			if (loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == false)
+			{
+				if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
+				ReloadRays();
+			}
+			else
+			{
+				if (loadRaysStatus.bRaysLoaded)
+					DrawRays3Ds_Threaded(rays3D);
+			}
+
+		}
+
+		if (sHideShowMenu.bShowXYLightGrid)
+		{
+			sHideShowMenu.bShowFullLightGrid = false;
+			if (loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == false)
+			{
+				if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
+				ReloadRays();
+			}
+			else
+			{
+				if (loadRaysStatus.bRaysLoaded)
+					DrawFinalRayPoints();
+			}
+
+		}
+		
 
 		DrawFinalRayPoints();
 
@@ -1214,6 +1248,23 @@ public:
 		LoadOptionsMenuFor3DWorld();
 
 	}
+
+	// Reloads all the rays in the 3D world
+	void ReloadRays()
+	{
+		loadRaysStatus.bLoadingRays = true;
+		// TODO move to threading later
+		for (size_t i = 0; i < 30000; i++)
+		{
+			for (auto& ray : rays3D) {
+				RayStep3D(ray, 1.0f, SagittariusA.r_s);
+			}
+		}
+		RemoveTrailRays3D(rays3D);
+		loadRaysStatus.bLoadingRays = false;
+		loadRaysStatus.bRaysLoaded = true;
+	}
+
 
 	// Loads default messages for the 3D world
 	void LoadDefaultMessagesFor3DWorld()
@@ -1262,6 +1313,20 @@ public:
 		AddMessage(sMenuMessage);
 		if (GetKey(olc::Key::K5).bPressed)
 			sHideShowMenu.bShowDebugObjects = !sHideShowMenu.bShowDebugObjects;
+
+		sMenuMessage = "Press 6 to show/hide Full Light Grid";
+		AddMessage(sMenuMessage);
+		if (GetKey(olc::Key::K6).bPressed)
+		{
+			sHideShowMenu.bShowFullLightGrid = !sHideShowMenu.bShowFullLightGrid;
+		}
+
+		sMenuMessage = "Press 7 to show/hide XY Light Grid";
+		AddMessage(sMenuMessage);
+		if (GetKey(olc::Key::K7).bPressed)
+		{
+			sHideShowMenu.bShowXYLightGrid = !sHideShowMenu.bShowXYLightGrid;
+		}
 	}
 
 	void DisplayCredits()
