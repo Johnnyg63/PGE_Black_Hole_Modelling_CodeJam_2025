@@ -95,6 +95,12 @@
 #include <numbers>
 #include <optional>
 #include <sstream>
+#include <functional>
+#define _USE_MATH_DEFINES 
+#include <cmath>							
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif // M_PI
 
 #if !defined(OLC_VECTOR3D_DEFINED)
 namespace olc
@@ -179,6 +185,12 @@ namespace olc
 			return v_3d(x * r, y * r, z * r);
 		}
 
+		// Treat this as cartesian coordinate (X, Y, Z), return polar equivalent (R, Theta, PHI)
+		inline constexpr v_3d polar() const
+		{
+			return v_3d(mag(), std::atan2(y, x), std::acos(z / mag()));
+		}
+
 		// Rounds all components down
 		inline constexpr v_3d floor() const
 		{
@@ -227,7 +239,11 @@ namespace olc
 		// Linearly interpolate between this vector, and another vector, given normalised parameter 't'
 		inline constexpr v_3d lerp(const v_3d& v1, const double t) const
 		{
-			return this->operator*(T(1.0 - t)) + (v1 * T(t));
+			// Fix for E0135: class "olc::v_3d<double>" has no member "operator*"
+            // Change this line in v_3d::lerp:
+            // return this->operator*(T(1.0 - t)) + (v1 * T(t));
+            // To:
+            return (*this) * T(1.0 - t) + (v1 * T(t));
 		}
 
 		// Compare if this vector is numerically equal to another
@@ -239,7 +255,11 @@ namespace olc
 		// Compare if this vector is not numerically equal to another
 		inline constexpr bool operator != (const v_3d& rhs) const
 		{
-			return (this->x != rhs.x || this->y != rhs.y || this != rhs.z);
+			// Fix for E0042: operand types are incompatible ("const olc::v_3d<double> *" and "double")
+			// Replace the operator!= implementation with the correct comparison
+			// return (this->x != rhs.x || this->y != rhs.y || this != rhs.z);
+			// To:
+			return (this->x != rhs.x || this->y != rhs.y || this->z != rhs.z);
 		}
 
 		// Return this vector as a std::string, of the form "(x,y)"
@@ -706,6 +726,35 @@ namespace olc::utils::hw3d
 		olc::DecalStructure layout = olc::DecalStructure::LIST;
 	};
 
+	// John Galvin: 
+	/*
+	* Texture type for spheres only
+	*/
+	enum SPHERE_TEXTURE_TYPE {
+
+		SOLID_TEXTURE = 0,
+		TOP_DOWN_VIEW,
+		TEXTURE_MAP
+
+	} SphereTextureType;
+
+	/*
+	* Texture type for SkyCub only
+	*/
+	enum CUBE_TEXTURE_TYPE {
+
+		TEXTURE = 0,
+		LEFT_CROSS_TEXTURE_CUBE_MAP,
+		LEFT_CROSS_TEXTURE_RECT_MAP,
+		VERT_TEXTURE_MAP,
+		HORZ_TEXTURE_MAP
+
+
+	} SkyCubeTextureType;
+
+
+	// End John Galvin
+
 
 	inline olc::utils::hw3d::mesh CreateSanityCube()
 	{
@@ -1058,6 +1107,943 @@ namespace olc::utils::hw3d
 	}
 
 
+	// John Galvin
+
+	/*
+	* Creates the all glorious triangle
+	*/
+	olc::utils::hw3d::mesh CreateTriangle()
+	{
+		olc::utils::hw3d::mesh m;
+
+		// Lower left corner
+		m.pos.push_back({ 0.0f, -0.5f * float(sqrt(3)) / 3, 0.0f }); m.norm.push_back({ 0, 0, 0, 0 }); m.uv.push_back({ 0, 0 }); m.col.push_back(olc::WHITE);
+
+		// Lower right corner
+		m.pos.push_back({ 0.0f, 0.5f * float(sqrt(3)) / 3, 0.0f }); m.norm.push_back({ 0, 0, 0, 0 }); m.uv.push_back({ 0, 0 }); m.col.push_back(olc::WHITE);
+
+		// Upper Right corner
+		m.pos.push_back({ 0.5f, 0.0f * float(sqrt(3)) * 2 / 3, 0.0f }); m.norm.push_back({ 0, 0, 0, 0 }); m.uv.push_back({ 0, 0 }); m.col.push_back(olc::WHITE);
+
+		return m;
+
+
+	}
+
+	/*
+	* Creates a 3 Sided Pyramid
+	*/
+	olc::utils::hw3d::mesh Create3SidedPyramid(olc::Pixel pixelCol = olc::WHITE)
+	{
+		olc::utils::hw3d::mesh m;
+
+		auto meshPushBack = [&](vf3d pos, vf2d textCoord, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
+				m.uv.push_back({ textCoord.x, textCoord.y });					// TexCoord
+				m.col.push_back(col);											// COLOURS
+			};
+
+		// Face 1 
+		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol);	// Position 0 (Top Point)
+		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, pixelCol);	// Position 1
+		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, pixelCol);	// Position 2
+
+		// Face 2
+		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol);	// Position 0 ( Top Point)
+		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, pixelCol);	// Position 2
+		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol);	// Position 3
+
+		// Face 3
+		meshPushBack({ 0.5f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol);	// Position 0 ( Top Point)
+		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, pixelCol);	// Position 1
+		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol);	// Position 3
+
+		// Face 4
+		meshPushBack({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, pixelCol);	// Position 1
+		meshPushBack({ 0.0f, 0.5f, 0.0f }, { 0.0f, 0.0f }, pixelCol); // Position 2
+		meshPushBack({ 0.0f, 0.5f, 0.5f }, { 0.0f, 0.0f }, pixelCol); // Position 3
+
+
+		return m;
+	}
+
+	/*
+	* Creates a Square Pyramind
+	*/
+	olc::utils::hw3d::mesh Create4SidedPyramid(SPHERE_TEXTURE_TYPE SphereTextureType = SPHERE_TEXTURE_TYPE::SOLID_TEXTURE, olc::Pixel pixelCol = olc::WHITE)
+	{
+		olc::utils::hw3d::mesh m;
+
+		vf3d vf3dPosition = { 0.0f, 0.0f, 0.0f };
+		switch (SphereTextureType)
+		{
+		case SOLID_TEXTURE:
+		{
+			// Buttom Face, 2 Triangles
+			m.uv.push_back({ 0.0f, 0.0f });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f }); // Position 2
+			m.uv.push_back({ 1.0f, 1.0f }); // Position 3
+
+			m.uv.push_back({ 0.0f, 0.0f }); // Position 1
+			m.uv.push_back({ 1.0f, 1.0f }); // Position 3
+			m.uv.push_back({ 0.0f, 1.0f }); // Position 4
+
+			// Face 1
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 0.5, 0.5 });	// Position 5 (Top Point)
+
+			// Face 2
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 0.5, 0.5 });	// Position 5 (Top Point)
+
+			// Face 3
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 0.5, 0.5 });	// Position 5 (Top Point)
+
+			// Face 4
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 0.5, 0.5 });	// Position 5 (Top Point)
+			break;
+		}
+		case TOP_DOWN_VIEW:
+		{
+			// Buttom Face, 2 Triangles
+			m.uv.push_back({ 0.0f, 0.0f });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f }); // Position 2
+			m.uv.push_back({ 1.0f, 1.0f }); // Position 3
+
+			m.uv.push_back({ 0.0f, 0.0f }); // Position 1
+			m.uv.push_back({ 1.0f, 1.0f }); // Position 3
+			m.uv.push_back({ 0.0f, 1.0f }); // Position 4
+
+			// Face 1
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 0.5, 0.5 });	// Position 5 (Top Point)
+
+			// Face 2
+			m.uv.push_back({ 1.0f, 0.0f });	// Position 2
+			m.uv.push_back({ 1.0f, 1.0f });	// Position 3
+			m.uv.push_back({ 0.5f, 0.5f }); // Position 5 (Top Point)
+
+			// Face 3
+			m.uv.push_back({ 1.0f, 1.0f });	// Position 3
+			m.uv.push_back({ 0.0f, 1.0f });	// Position 4
+			m.uv.push_back({ 0.5f, 0.5f }); // Position 5 (Top Point)
+
+			// Face 4
+			m.uv.push_back({ 0.0f, 1.0f });	// Position 4
+			m.uv.push_back({ 0.0, 0.0 });	// Position 1
+			m.uv.push_back({ 0.5f, 0.5f }); // Position 5 (Top Point)
+
+			break;
+		}
+		case TEXTURE_MAP:
+		default:
+		{
+			// Buttom Face, 2 Triangles
+			m.uv.push_back({ 0.34f, 0.333333f });	// Position 1
+			m.uv.push_back({ 0.666666f, 0.333333f });	// Position 2
+			m.uv.push_back({ 0.666666f, 0.666666f });	// Position 3
+
+			m.uv.push_back({ 0.333333f, 0.333333f });	// Position 1
+			m.uv.push_back({ 0.666666f, 0.666666f });	// Position 3
+			m.uv.push_back({ 0.333333f, 0.666666f });	// Position 4
+
+			// Face 1
+			m.uv.push_back({ 0.333333f, 0.333333f });	// Position 1
+			m.uv.push_back({ 0.666666f, 0.333333f });	// Position 2
+			m.uv.push_back({ 0.5f, 0.0f });		// Position
+
+			// Face 2
+			m.uv.push_back({ 0.666666f, 0.333333f });	// Position 2
+			m.uv.push_back({ 0.666666f, 0.666666f });	// Position 3
+			m.uv.push_back({ 1.0f, 0.5f });		// Position		
+
+			// Face 3
+			m.uv.push_back({ 0.666666f, 0.666666f });	// Position 3
+			m.uv.push_back({ 0.333333f, 0.666666f });	// Position 4
+			m.uv.push_back({ 0.5f, 1.0f });		// Position 
+
+			// Face 4
+			m.uv.push_back({ 0.333333f, 0.666666f });	// Position 4
+			m.uv.push_back({ 0.333333f, 0.333333f });	// Position 1
+			m.uv.push_back({ 0.0f, 0.5f }); // Position 5 (Top Point)
+			break;
+		}
+		}
+
+		auto meshPushBack = [&](vf3d pos)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z }); m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 }); m.col.push_back(pixelCol);
+			};
+
+		//Buttom Face has 4 sides therefore 2 trianges (White and Green)
+		meshPushBack({ 0.0f, 0.0f, 0.5f });		// Position 1	
+		meshPushBack({ 0.5f, 0.0f, 0.5f });		// Position 2
+		meshPushBack({ 0.5f, 0.0f, 0.0f });		// Position 3
+
+		meshPushBack({ 0.0f, 0.0f, 0.5f }); 	// Position 1
+		meshPushBack({ 0.5f, 0.0f, 0.0f }); 	// Position 3
+		meshPushBack({ 0.0f, 0.0f, 0.0f });		// Position 4
+
+		// Face 1 
+		meshPushBack({ 0.0f, 0.0f, 0.5f });		// Position 1
+		meshPushBack({ 0.5f, 0.0f, 0.5f }); 	// Position 2
+		meshPushBack({ 0.25f, 0.25f, 0.25f });	// Position 5 (Top Point)
+
+		// Face 2
+		meshPushBack({ 0.5f, 0.0f, 0.5f }); 	// Position 2
+		meshPushBack({ 0.5f, 0.0f, 0.0f });		// Position 3
+		meshPushBack({ 0.25f, 0.25f, 0.25f }); 	// Position 5 (Top Point)
+
+		// Face 3
+		meshPushBack({ 0.5f, 0.0f, 0.0f }); 	// Position 3
+		meshPushBack({ 0.0f, 0.0f, 0.0f }); 	// Position 4
+		meshPushBack({ 0.25f, 0.25f, 0.25f }); 	// Position 5 (Top Point)
+
+		// Face 4
+		meshPushBack({ 0.0f, 0.0f, 0.0f }); 	// Position 4
+		meshPushBack({ 0.0f, 0.0f, 0.5f });		// Position 1
+		meshPushBack({ 0.25f, 0.25f, 0.25f });	// Position 5 (Top Point)
+
+
+		return m;
+	}
+
+	/*
+	* Creates a Sphere
+	* fRadius : in Mesh unit size,
+	* nLatitudeCount : Latitude number of rings
+	* nLatitudeCount : nLongitudeCount number of rings
+	*/
+	olc::utils::hw3d::mesh CreateSphere(float fRadius = 0.5, int32_t nLatitudeCount = 50, int32_t nLongitudeCount = 50)
+	{
+		olc::utils::hw3d::mesh m;
+
+		olc::utils::hw3d::mesh mTemp; // Temp mesh use to calcuate the points, texture and colours
+
+		float fTheta = 0.0f;
+		float sinTheta = 0.0f;
+		float cosTheta = 0.0f;
+		float fHorAngle = 0.0f;
+		float sinHorAngle = 0.0f;
+		float cosHorAngle = 0.0f;
+		float x, y, z, v, u;
+		olc::vf3d vf3dPosition;
+
+		for (int32_t i = 0; i <= nLatitudeCount; i++)
+		{
+			v = 1 - float(i) / float(nLatitudeCount);	// Get the V TextCoord for UV
+			fTheta = i * M_PI / nLatitudeCount;			// Verical Angle
+			sinTheta = sin(fTheta);
+			cosTheta = cos(fTheta);
+
+			for (int32_t j = 0; j <= nLongitudeCount; j++)
+			{
+				u = 1 - float(j) / float(nLatitudeCount); // Get the u TextCoord for UV
+
+				fHorAngle = j * 2 * M_PI / nLongitudeCount; // Horizontal angle
+				sinHorAngle = sin(fHorAngle);
+				cosHorAngle = cos(fHorAngle);
+
+				vf3dPosition.x = fRadius * cosHorAngle * sinTheta;
+				vf3dPosition.y = fRadius * cosTheta;
+				vf3dPosition.z = fRadius * sinHorAngle * sinTheta;
+
+				mTemp.pos.push_back({ vf3dPosition.x, vf3dPosition.y, vf3dPosition.z });	// Position
+				mTemp.uv.push_back({ u, v });												// Texture Coords
+				mTemp.col.push_back(olc::WHITE);											// Colours
+
+			}
+		}
+
+		// As the engine currently does not support indices we need to calculate the trianges (faces)
+		// To do this we will work out the indices, then push back the indice mTemp vector into our output mesh (m) vectors
+		// Hence in the end we will have all the face locations in blocks of 3 in output mesh (m)
+
+		// This code is modified version from the Microsoft DirectX tutorial 
+		// https://github.com/microsoft/DirectXTK/wiki
+
+		auto meshPushBack = [&](vf3d pos, vf2d textCoord, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
+				m.uv.push_back({ textCoord.x, textCoord.y });					// TexCoord
+				m.col.push_back(col);											// COLOURS
+			};
+
+
+
+		const size_t stride = nLongitudeCount + 1;
+		const size_t mTempSize = mTemp.pos.size() - 1;
+
+		size_t pos0, pos1, pos2, pos3, nextY, nextX;
+
+		for (size_t y = 0; y < nLatitudeCount; y++)
+		{
+			for (size_t x = 0; x <= nLongitudeCount; x++)
+			{
+				nextY = y + 1;
+				nextX = (x + 1) % stride;
+
+				// point = y * stride + x
+				pos0 = y * stride + x;
+				pos1 = nextY * stride + x;
+				pos2 = y * stride + nextX;
+				pos3 = nextY * stride + nextX;
+
+				// Face 1
+
+				// Position 0
+				meshPushBack
+				(
+					{ mTemp.pos[pos0][0], mTemp.pos[pos0][1], mTemp.pos[pos0][2] },
+					{ mTemp.uv[pos0][0], mTemp.uv[pos0][1] },
+					mTemp.col[pos0]
+				);
+
+				// Position 1
+				meshPushBack
+				(
+					{ mTemp.pos[pos1][0], mTemp.pos[pos1][1], mTemp.pos[pos1][2] },
+					{ mTemp.uv[pos1][0], mTemp.uv[pos1][1] },
+					mTemp.col[pos1]
+				);
+
+				// Position 2
+				meshPushBack
+				(
+					{ mTemp.pos[pos2][0], mTemp.pos[pos2][1], mTemp.pos[pos2][2] },
+					{ mTemp.uv[pos2][0], mTemp.uv[pos2][1] },
+					mTemp.col[pos2]
+				);
+
+				// Face 2
+
+				// Position 1
+				meshPushBack
+				(
+					{ mTemp.pos[pos1][0], mTemp.pos[pos1][1], mTemp.pos[pos1][2] },
+					{ mTemp.uv[pos1][0], mTemp.uv[pos1][1] },
+					mTemp.col[pos1]
+				);
+
+				// Position 2
+				meshPushBack
+				(
+					{ mTemp.pos[pos2][0], mTemp.pos[pos2][1], mTemp.pos[pos2][2] },
+					{ mTemp.uv[pos2][0], mTemp.uv[pos2][1] },
+					mTemp.col[pos2]
+				);
+
+				// position 3
+				meshPushBack
+				(
+					{ mTemp.pos[pos3][0], mTemp.pos[pos3][1], mTemp.pos[pos3][2] },
+					{ mTemp.uv[pos3][0], mTemp.uv[pos3][1] },
+					mTemp.col[pos3]
+				);
+
+
+			}
+		}
+
+		// finally clean up
+		mTemp.col.clear();
+		mTemp.norm.clear();
+		mTemp.pos.clear();
+		mTemp.uv.clear();
+		return m;
+	}
+
+	/*
+	* Creates a Cube and sets the texcoord depending on the texture map image
+	* CUBE_TEXTURE_TYPE : SOLID_TEXTURE, LEFT_CROSS_TEXTURE_CUBE_MAP, LEFT_CROSS_TEXTURE_RECT_MAP, VERT_TEXTURE_MAP, HORZ_TEXTURE_MAP
+	*/
+	olc::utils::hw3d::mesh CreateCube(CUBE_TEXTURE_TYPE CubeTextureType = CUBE_TEXTURE_TYPE::LEFT_CROSS_TEXTURE_CUBE_MAP)
+	{
+		olc::utils::hw3d::mesh m;
+
+		//   Coordinates
+		//        5--------6
+		//       /|       /|
+		//      1--------2 |
+		//      | |      | |
+		//      | 4------|-7
+		//      |/       |/
+		//      0--------3
+
+
+		auto meshPushBack = [&](vf3d pos, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z });
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });
+				m.col.push_back(col);
+			};
+
+
+		// 1: Lets see what we are dealing with
+
+		switch (CubeTextureType)
+		{
+
+		case CUBE_TEXTURE_TYPE::LEFT_CROSS_TEXTURE_CUBE_MAP:
+		{
+			/*
+			* Notes for a Cube Map we just use Javidx9 implementation as is it simply brilliant!
+			*
+			*  __________
+			* |   **     |
+			* | ******** |
+			* |   **     |
+			* |       ~~ |
+			*  ----------
+			*/
+
+			m = CreateSanityCube();
+			return m;
+			break;
+		}
+		case CUBE_TEXTURE_TYPE::LEFT_CROSS_TEXTURE_RECT_MAP:
+		{
+			/*
+			* Notes for a Rect Map the x value never changes, just the y
+			*
+			*  __________
+			* |   **     |
+			* | ******** |
+			* |   **     |
+			*  ----------
+			*/
+
+			// South
+			m.uv.push_back({ 0.25, 0.66666f });
+			m.uv.push_back({ 0.5, 0.66666f });
+			m.uv.push_back({ 0.5, 0.33333f });
+			m.uv.push_back({ 0.25, 0.66666f });
+			m.uv.push_back({ 0.5, 0.33333f });
+			m.uv.push_back({ 0.25, 0.33333f });
+
+			// East
+			m.uv.push_back({ 0.5, 0.66666f });
+			m.uv.push_back({ 0.75, 0.66666f });
+			m.uv.push_back({ 0.75, 0.33333f });
+			m.uv.push_back({ 0.5, 0.66666f });
+			m.uv.push_back({ 0.75, 0.33333f });
+			m.uv.push_back({ 0.5, 0.33333f });
+
+			// North
+			m.uv.push_back({ 0.75, 0.66666f });
+			m.uv.push_back({ 1.0, 0.66666f });
+			m.uv.push_back({ 1.0, 0.33333f });
+			m.uv.push_back({ 0.75, 0.66666f });
+			m.uv.push_back({ 1.0, 0.33333f });
+			m.uv.push_back({ 0.75, 0.33333f });
+
+			// West
+			m.uv.push_back({ 0.0, 0.66666f });
+			m.uv.push_back({ 0.25, 0.66666f });
+			m.uv.push_back({ 0.25, 0.33333f });
+			m.uv.push_back({ 0.0, 0.66666f });
+			m.uv.push_back({ 0.25, 0.33333f });
+			m.uv.push_back({ 0.0, 0.33333f });
+
+			// Top
+			m.uv.push_back({ 0.25, 0.33333f });
+			m.uv.push_back({ 0.5, 0.33333f });
+			m.uv.push_back({ 0.5, 0.0 });
+			m.uv.push_back({ 0.25, 0.33333f });
+			m.uv.push_back({ 0.5, 0.0 });
+			m.uv.push_back({ 0.25, 0.0 });
+
+			// Bottom
+			m.uv.push_back({ 0.25, 1.0f });
+			m.uv.push_back({ 0.5, 1.0f });
+			m.uv.push_back({ 0.5, 0.66666f });
+			m.uv.push_back({ 0.25, 1.0f });
+			m.uv.push_back({ 0.5, 0.66666f });
+			m.uv.push_back({ 0.25, 0.66666f });
+
+			break;
+		}
+		case CUBE_TEXTURE_TYPE::VERT_TEXTURE_MAP:
+		{
+			/*
+			* Note: for a vertical texture, x remains the same, y increase
+			*
+			*  __
+			* |**|
+			* |**|
+			* |**|
+			* |**|
+			* |**|
+			* |**|
+			*  --
+			*/
+
+			float y = 1 / 6;
+			for (int8_t i = 0; i < 5; i++)
+			{
+				float fY = y * i;
+				m.uv.push_back({ 0.0f,	fY });		// Position 1
+				m.uv.push_back({ 1.0f,	fY });		// Position 2
+				m.uv.push_back({ 0.0,	fY + y });	// Position 3
+				m.uv.push_back({ 1.0f,	fY });		// Position 2
+				m.uv.push_back({ 0.0,	fY + y });	// Position 3
+				m.uv.push_back({ 1.0f,	fY + y });	// Position 4
+
+			}
+			break;
+		}
+		case CUBE_TEXTURE_TYPE::HORZ_TEXTURE_MAP:
+		{
+
+			/*
+			* Note: for a horz texture, y remains the same, x increase
+			*
+			*  __________________
+			* | **|**|**|**|**|**|
+			*  ------------------
+			*/
+
+			float x = 1 / 6;
+			for (int8_t i = 0; i < 5; i++)
+			{
+				float fX = x * i;
+
+				m.uv.push_back({ fX,		0.0f });	// Position 1
+				m.uv.push_back({ fX + x,	0.0 });		// Position 2
+				m.uv.push_back({ fX,		1.0f });	// Position 3
+				m.uv.push_back({ fX + x,	0.0 });		// Position 2
+				m.uv.push_back({ fX,		1.0f });	// Position 3
+				m.uv.push_back({ fX + x,	1.0f });	// Position 4
+
+			}
+			break;
+		}
+		case CUBE_TEXTURE_TYPE::TEXTURE:
+		default:
+		{
+			// For a solid texture, South, East, North, West, Top and Bottom all have the same Text Coords
+			for (int8_t i = 0; i < 6; i++)
+			{
+				m.uv.push_back({ 0.0f, 0.0f }); // Position 1
+				m.uv.push_back({ 1.0f, 0.0 });	// Position 2
+				m.uv.push_back({ 0.0, 1.0 });	// Position 3
+				m.uv.push_back({ 1.0f, 0.0 });	// Position 2
+				m.uv.push_back({ 0.0, 1.0 });	// Position 3
+				m.uv.push_back({ 1.0f, 1.0f }); // Position 4
+			}
+
+			break;
+		}
+
+		}
+
+
+		// South
+		meshPushBack({ 0,0,0 });
+		meshPushBack({ 1,0,0 });
+		meshPushBack({ 1,1,0 });
+		meshPushBack({ 0,0,0 });
+		meshPushBack({ 1,1,0 });
+		meshPushBack({ 0,1,0 });
+
+		// East
+		meshPushBack({ 1,0,0 });
+		meshPushBack({ 1,0,1 });
+		meshPushBack({ 1,1,1 });
+		meshPushBack({ 1,0,0 });
+		meshPushBack({ 1,1,1 });
+		meshPushBack({ 1,1,0 });
+
+		// North
+		meshPushBack({ 1,0,1 });
+		meshPushBack({ 0,0,1 });
+		meshPushBack({ 0,1,1 });
+		meshPushBack({ 1,0,1 });
+		meshPushBack({ 0,1,1 });
+		meshPushBack({ 1,1,1 });
+
+		// West
+		meshPushBack({ 0,0,1 });
+		meshPushBack({ 0,0,0 });
+		meshPushBack({ 0,1,0 });
+		meshPushBack({ 0,0,1 });
+		meshPushBack({ 0,1,0 });
+		meshPushBack({ 0,1,1 });
+
+		// Top
+		meshPushBack({ 0,1,0 });
+		meshPushBack({ 1,1,0 });
+		meshPushBack({ 1,1,1 });
+		meshPushBack({ 0,1,0 });
+		meshPushBack({ 1,1,1 });
+		meshPushBack({ 0,1,1 });
+
+		// Bottom
+		meshPushBack({ 0,0,1 });
+		meshPushBack({ 1,0,1 });
+		meshPushBack({ 1,0,0 });
+		meshPushBack({ 0,0,1 });
+		meshPushBack({ 1,0,0 });
+		meshPushBack({ 0,0,0 });
+
+
+		return m;
+	}
+
+
+	/*
+	* Creates the HW3D Skycube mesh to be used with HW3D_DrawSkyCube method
+	* NOTE: This mesh has no texture coordinates, as HW3D_DrawSkyCube draws the mesh using the GPUSkyCubeTask
+	* The GPUSkyCubeTask requires use to provide the 6 sides of the cube in the olc::SkyCubeProperties
+	* The mesh coordinates are in Left Hand ONLY. (OpenGL GL_TEXTURE_CUBE_MAP (SkyCubes) are always Left Hand)
+	* The GPUSkyCubeTask will take care of the rest
+	*/
+	olc::utils::hw3d::mesh CreateHW3DSkyCube()
+	{
+		olc::utils::hw3d::mesh m;
+		olc::utils::hw3d::mesh mTemp; // Temp mesh use to calcuate the points, texture and colours
+
+
+		// Some Autos to help keep our code managable
+
+		// Pushs back pos to m mesh and auto calcuates the norms
+		auto meshPushBack = [&](vf3d pos, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
+				m.uv.push_back({ 0.0f, 0.0f });									// TexCoord
+				m.col.push_back(col);											// COLOURS
+			};
+
+		// Uses the past face triangle positions to create our output mesh
+		auto createOutPutMesh = [&](std::vector<int> vecPosition)
+			{
+				for (auto p : vecPosition)
+				{
+					meshPushBack({ mTemp.pos[p][0], mTemp.pos[p][1], mTemp.pos[p][2] });
+				}
+
+			};
+
+
+		//   Coordinates
+		//        7--------6
+		//       /|       /|
+		//      4--------5 |
+		//      | |      | |
+		//      | 3------|-2
+		//      |/       |/
+		//      0--------1
+		//
+
+
+		// Set up our temp mesh
+		mTemp.pos.push_back({ -1.0f, -1.0f, 1.0f });	// Position 0
+		mTemp.pos.push_back({ 1.0f, -1.0f, 1.0f });		// Position 1
+		mTemp.pos.push_back({ 1.0f, -1.0f, -1.0f });	// Position 2
+		mTemp.pos.push_back({ -1.0f, -1.0f, -1.0f });	// Position 3
+		mTemp.pos.push_back({ -1.0f, 1.0f, 1.0f });		// Position 4
+		mTemp.pos.push_back({ 1.0f, 1.0f, 1.0f });		// Position 5
+		mTemp.pos.push_back({ 1.0f, 1.0f, -1.0f });		// Position 6
+		mTemp.pos.push_back({ -1.0f, 1.0f, -1.0f });	// Position 7
+
+		// As the engine currently does not support indices we need to calculate the trianges (faces)
+		// To do this we will manaully set the triangles as per the indices map, 
+		// then push back the index mTemp vector into our output mesh (m) vectors
+		// Hence in the end we will have all the face locations in blocks of 3 in output mesh (m)
+
+
+		// ORDER IS IMPORTANT
+
+		// Right face
+		createOutPutMesh({ 1, 2, 6, 6, 5, 1 });
+
+		// Left Face
+		createOutPutMesh({ 0, 4, 7, 7, 3, 0 });
+
+		// Top Face
+		createOutPutMesh({ 4, 5, 6, 6, 7, 4 });
+
+		// Buttom Face
+		createOutPutMesh({ 0, 3, 2, 2, 1, 0 });
+
+		// Back Face
+		createOutPutMesh({ 0, 1, 5, 5, 4, 0 });
+
+		// Front Face
+		createOutPutMesh({ 3, 7, 6, 6, 2, 3 });
+
+		// finally some clean up
+		mTemp.pos.clear();
+
+
+		return m;
+
+	}
+
+	olc::utils::hw3d::mesh CreateFullScreenQuad()
+	{
+		olc::utils::hw3d::mesh m;
+		auto meshPushBack = [&](vf3d pos, vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();
+				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
+				m.uv.push_back({ uv.x, uv.y });									// TexCoord
+				m.col.push_back(col);											// COLOURS
+			};
+		// First Triangle
+		meshPushBack({ -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f });	// Top Left
+		meshPushBack({ 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f });	// Bottom Right
+		meshPushBack({ -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f });	// Bottom Left
+		// Second Triangle
+		meshPushBack({ -1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f });	// Top Left
+		meshPushBack({ 1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f });		// Top Right
+		meshPushBack({ 1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f });	// Bottom Right
+		return m;
+	}
+
+	olc::utils::hw3d::mesh CreateScreenSpaceQuad(float x, float y, float w, float h)
+	{
+		olc::utils::hw3d::mesh m;
+		auto meshPushBack = [&](vf3d pos, vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				vf3d vf3dNorm = pos.norm();										
+				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
+				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
+				m.uv.push_back({ uv.x, uv.y });									// TexCoord
+				m.col.push_back(col);											// COLOURS
+			};
+		// First Triangle
+		meshPushBack({ x, y, 0.0f }, { 0.0f, 0.0f });			// Top Left
+		meshPushBack({ x + w, y + h, 0.0f }, { 1.0f, 1.0f });	// Bottom Right
+		meshPushBack({ x, y + h, 0.0f }, { 0.0f, 1.0f });		// Bottom Left
+		// Second Triangle
+		meshPushBack({ x, y, 0.0f }, { 0.0f, 0.0f });			// Top Left
+		meshPushBack({ x + w, y, 0.0f }, { 1.0f, 0.0f });		// Top Right
+		meshPushBack({ x + w, y + h, 0.0f }, { 1.0f, 1.0f });	// Bottom Right
+		return m;
+	}
+
+	/*
+	* Creates a Torus 
+	*/
+	olc::utils::hw3d::mesh Create3DTorus(float fMajorRadius, float fMinorRadius, int32_t nMajorSegments = 64, int32_t nMinorSegments = 32, olc::Pixel pixelCol = olc::WHITE)
+	{
+		olc::utils::hw3d::mesh m;
+		float theta0 = 0.0f;
+		float theta1 = 0.0f;
+		float phi0 = 0.0f;
+		float phi1 = 0.0f;
+		float x, y, z;
+
+		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				m.pos.push_back({ pos.x, pos.y, pos.z });			// COORDINATES
+				m.norm.push_back({ norm.x, norm.y, norm.z, 0 });	// NORMS
+				m.uv.push_back({ uv.x, uv.y });						// TexCoord
+				m.col.push_back(col);								// COLOURS
+			};
+
+		for (int i = 0; i < nMajorSegments; ++i)
+		{
+			theta0 = 2.0f * M_PI * i / nMajorSegments;
+			theta1 = 2.0f * M_PI * (i + 1) / nMajorSegments;
+
+			for (int j = 0; j < nMinorSegments; ++j)
+			{
+				phi0 = 2.0f * M_PI * j / nMinorSegments;
+				phi1 = 2.0f * M_PI * (j + 1) / nMinorSegments;
+
+				// Four points of the quad
+				auto getVertex = [&](float theta, float phi) -> olc::vf3d
+					{
+						x = (fMajorRadius + fMinorRadius * cos(phi)) * cos(theta);
+						y = (fMajorRadius + fMinorRadius * cos(phi)) * sin(theta);
+						z = fMinorRadius * sin(phi);
+						return { x, y, z };
+					};
+
+				olc::vf3d p00 = getVertex(theta0, phi0);
+				olc::vf3d p01 = getVertex(theta0, phi1);
+				olc::vf3d p10 = getVertex(theta1, phi0);
+				olc::vf3d p11 = getVertex(theta1, phi1);
+
+				// Normals (from center of tube to surface)
+				auto getNormal = [&](float theta, float phi) -> olc::vf3d
+					{
+						x = cos(theta) * cos(phi);
+						y = sin(theta) * cos(phi);
+						z = sin(phi);
+						return olc::vf3d(x, y, z).norm();
+					};
+
+				olc::vf3d n00 = getNormal(theta0, phi0);
+				olc::vf3d n01 = getNormal(theta0, phi1);
+				olc::vf3d n10 = getNormal(theta1, phi0);
+				olc::vf3d n11 = getNormal(theta1, phi1);
+
+				// UVs
+				olc::vf2d uv00 = { float(i) / nMajorSegments, float(j) / nMinorSegments };
+				olc::vf2d uv01 = { float(i) / nMajorSegments, float(j + 1) / nMinorSegments };
+				olc::vf2d uv10 = { float(i + 1) / nMajorSegments, float(j) / nMinorSegments };
+				olc::vf2d uv11 = { float(i + 1) / nMajorSegments, float(j + 1) / nMinorSegments };
+
+				// First triangle
+				meshPushBack(p00, n00, uv00, pixelCol);
+				meshPushBack(p10, n10, uv10, pixelCol);
+				meshPushBack(p11, n11, uv11, pixelCol);
+
+				// Second triangle
+				meshPushBack(p00, n00, uv00, pixelCol);
+				meshPushBack(p11, n11, uv11, pixelCol);
+				meshPushBack(p01, n01, uv01, pixelCol);
+			}
+		}
+
+		return m;
+
+
+	}
+
+	/*
+	* Creat a 2D Circle plane mesh for a 3D world
+	*/
+	olc::utils::hw3d::mesh Create2DCircle(float fRadius, int32_t nSegmentCount = 64, olc::Pixel pixelCol = olc::WHITE)
+	{
+		olc::utils::hw3d::mesh m;
+		auto meshPushBack = [&](olc::vf3d pos, olc::vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				olc::vf3d norm = { 0, 0, 1 };
+				m.pos.push_back({ pos.x, pos.y, pos.z });
+				m.norm.push_back({ norm.x, norm.y, norm.z, 0 });
+				m.uv.push_back({ uv.x, uv.y });
+				m.col.push_back(col);
+			};
+
+		olc::vf3d center = { 0.0f, 0.0f, 0.0f };
+		olc::vf2d centerUV = { 0.5f, 0.5f };
+
+		for (int i = 0; i < nSegmentCount; ++i)
+		{
+			float theta0 = 2.0f * M_PI * i / nSegmentCount;
+			float theta1 = 2.0f * M_PI * (i + 1) / nSegmentCount;
+
+			olc::vf3d p0 = { fRadius * cos(theta0), fRadius * sin(theta0), 0.0f };
+			olc::vf3d p1 = { fRadius * cos(theta1), fRadius * sin(theta1), 0.0f };
+
+			olc::vf2d uv0 = { 0.5f + 0.5f * cos(theta0), 0.5f + 0.5f * sin(theta0) };
+			olc::vf2d uv1 = { 0.5f + 0.5f * cos(theta1), 0.5f + 0.5f * sin(theta1) };
+
+			// Triangle: center, p0, p1
+			meshPushBack(center, centerUV, pixelCol);
+			meshPushBack(p0, uv0, pixelCol);
+			meshPushBack(p1, uv1, pixelCol);
+		}
+
+		return m;
+	}
+
+
+    olc::utils::hw3d::mesh CreateCircleDisk(float fRadius, float thickness, int32_t nSegmentCount = 64, olc::Pixel pixelCol = olc::WHITE)
+    {
+		olc::utils::hw3d::mesh m;
+		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+			m.pos.push_back({ pos.x, pos.y, pos.z });
+			m.norm.push_back({ norm.x, norm.y, norm.z, 0 });
+			m.uv.push_back({ uv.x, uv.y });
+			m.col.push_back(col);
+			};
+
+		float r0 = fRadius - thickness * 0.5f;
+		float r1 = fRadius + thickness * 0.5f;
+
+		for (int i = 0; i < nSegmentCount; ++i)
+		{
+			float theta0 = 2.0f * M_PI * i / nSegmentCount;
+			float theta1 = 2.0f * M_PI * (i + 1) / nSegmentCount;
+
+			olc::vf3d p0 = { r0 * cos(theta0), r0 * sin(theta0), 0.0f };
+			olc::vf3d p1 = { r1 * cos(theta0), r1 * sin(theta0), 0.0f };
+			olc::vf3d p2 = { r1 * cos(theta1), r1 * sin(theta1), 0.0f };
+			olc::vf3d p3 = { r0 * cos(theta1), r0 * sin(theta1), 0.0f };
+
+			olc::vf2d uv0 = { 0.5f + 0.5f * (p0.x / fRadius), 0.5f + 0.5f * (p0.y / fRadius) };
+			olc::vf2d uv1 = { 0.5f + 0.5f * (p1.x / fRadius), 0.5f + 0.5f * (p1.y / fRadius) };
+			olc::vf2d uv2 = { 0.5f + 0.5f * (p2.x / fRadius), 0.5f + 0.5f * (p2.y / fRadius) };
+			olc::vf2d uv3 = { 0.5f + 0.5f * (p3.x / fRadius), 0.5f + 0.5f * (p3.y / fRadius) };
+
+			olc::vf3d norm = { 0, 0, 1 };
+
+			// Front face (counter-clockwise)
+			meshPushBack(p0, norm, uv0, pixelCol);
+			meshPushBack(p1, norm, uv1, pixelCol);
+			meshPushBack(p2, norm, uv2, pixelCol);
+
+			meshPushBack(p0, norm, uv0, pixelCol);
+			meshPushBack(p2, norm, uv2, pixelCol);
+			meshPushBack(p3, norm, uv3, pixelCol);
+
+			// Back face (clockwise, z = 0)
+			olc::vf3d normBack = { 0, 0, -1 };
+			meshPushBack(p0, normBack, uv0, pixelCol);
+			meshPushBack(p2, normBack, uv2, pixelCol);
+			meshPushBack(p1, normBack, uv1, pixelCol);
+
+			meshPushBack(p0, normBack, uv0, pixelCol);
+			meshPushBack(p3, normBack, uv3, pixelCol);
+			meshPushBack(p2, normBack, uv2, pixelCol);
+		}
+		return m;
+
+    }
+
+
+	olc::utils::hw3d::mesh CreateGrid(float fSize = 10.0f, int32_t nLines = 10, olc::Pixel pixelCol = olc::WHITE)
+	{
+		olc::utils::hw3d::mesh m;
+		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				m.pos.push_back({ pos.x, pos.y, pos.z });			// COORDINATES
+				m.norm.push_back({ norm.x, norm.y, norm.z, 0 });	// NORMS
+				m.uv.push_back({ uv.x, uv.y });						// TexCoord
+				m.col.push_back(col);								// COLOURS
+			};
+
+		float halfSize = fSize * 0.5f;
+		float step = fSize / nLines;
+		for (int i = 0; i <= nLines; ++i)
+		{
+			float pos = -halfSize + i * step;
+			// Lines along X axis
+			meshPushBack({ -halfSize, 0.0f, pos }, { 0, 1, 0 }, { 0, 0 }, pixelCol);
+			meshPushBack({ halfSize, 0.0f, pos }, { 0, 1, 0 }, { 1, 0 }, pixelCol);
+			// Lines along Z axis
+			meshPushBack({ pos, 0.0f, -halfSize }, { 0, 1, 0 }, { 0, 1 }, pixelCol);
+			meshPushBack({ pos, 0.0f, halfSize }, { 0, 1, 0 }, { 1, 1 }, pixelCol);
+		}
+		m.layout = olc::DecalStructure::LINE;
+		
+		return m;
+	}
+
+	// End John Galvin
 
 	class Camera3D
 	{
@@ -1386,5 +2372,52 @@ namespace olc::utils::hw3d
 		float fAngle1 = 0.0f;
 		float fAngle2 = 0.0f;
 		olc::vf2d vSpin;
+	};
+}
+
+
+// Thanks Copilot, Johnnyg63 and Template Classes do not mix well
+
+
+// Hash functions for olc::vi3d
+namespace std {
+	template <>
+	struct hash<olc::vi3d> {
+		std::size_t operator()(const olc::vi3d& v) const noexcept {
+			std::size_t h1 = std::hash<int32_t>{}(v.x);
+			std::size_t h2 = std::hash<int32_t>{}(v.y);
+			std::size_t h3 = std::hash<int32_t>{}(v.z);
+			// Combine the hashes
+			return h1 ^ (h2 << 1) ^ (h3 << 2);
+		}
+	};
+}
+
+
+// Hash functions for olc::vd3d
+namespace std {
+	template <>
+	struct hash<olc::vd3d> {
+		std::size_t operator()(const olc::vd3d& v) const noexcept {
+			std::size_t h1 = std::hash<double>{}(v.x);
+			std::size_t h2 = std::hash<double>{}(v.y);
+			std::size_t h3 = std::hash<double>{}(v.z);
+			// Combine the hashes
+			return h1 ^ (h2 << 1) ^ (h3 << 2);
+		}
+	};
+}
+
+// Hash functions for olc::vf3d
+namespace std {
+	template <>
+	struct hash<olc::vf3d> {
+		std::size_t operator()(const olc::vf3d& v) const noexcept {
+			std::size_t h1 = std::hash<float>{}(v.x);
+			std::size_t h2 = std::hash<float>{}(v.y);
+			std::size_t h3 = std::hash<float>{}(v.z);
+			// Combine the hashes
+			return h1 ^ (h2 << 1) ^ (h3 << 2);
+		}
 	};
 }
