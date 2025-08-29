@@ -58,7 +58,7 @@ class PGEBlackHoleDemo : public olc::PixelGameEngine
 {
 
 public:
-	//olc::SplashScreen olcSplashScreen; //TODO add a splash screen
+	olc::SplashScreen olcSplashScreen; //TODO add a splash screen
 
 	// In Example's constructor, initialize PBH_SagittariusA after the class definition
 	PGEBlackHoleDemo() {
