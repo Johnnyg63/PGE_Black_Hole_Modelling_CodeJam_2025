@@ -445,6 +445,8 @@ public:
 					
 			}
 		}
+
+		raysToRemove.clear();
 	}
 
 	// Removes tail rays that are outside of the X/Y bounds to optimize rendering
@@ -1254,6 +1256,9 @@ public:
 		// Load Options Menu
 		LoadOptionsMenuFor3DWorld();
 
+		// Display Ray Numbers
+		DisplayRayNumbersFor3DWorld();
+
 	}
 
 	// Reloads all the rays in the 3D world
@@ -1297,6 +1302,7 @@ public:
 	// Loads the options menu for the 3D world
 	void LoadOptionsMenuFor3DWorld()
 	{
+		AddMessage(sMenuMessageBreak);
 		std::string	sMenuMessage = "Press 1 to show/hide Event Horizon";
 		AddMessage(sMenuMessage);
 		if (GetKey(olc::Key::K1).bPressed)
@@ -1335,6 +1341,34 @@ public:
 		{
 			sHideShowMenu.bShowXYLightGrid = !sHideShowMenu.bShowXYLightGrid;
 		}
+		AddMessage(sMenuMessageBreak);
+	}
+
+
+	// Display Ray Numbers for 3D world
+	void DisplayRayNumbersFor3DWorld()
+	{
+		size_t szRayTotal = 0.0f;
+		if (loadRaysStatus.bRaysLoaded)
+		{
+			for(auto& ray : rays3D)
+			{
+				szRayTotal += ray.viewPortTrail.size();
+				
+			}
+			AddMessage(sMenuMessageBreak);
+			std::string sMenuMessage = "Totol Calculated Ray Count: " + std::to_string(rays3D.size());
+			AddMessage(sMenuMessage);
+			sMenuMessage = "Total Optimized Ray Count: " + std::to_string(finalRayPoints.size());
+			AddMessage(sMenuMessage);
+			sMenuMessage = "Total Optimized X/Y Ray Count: " + std::to_string(finalXYRayPoints.size());
+			AddMessage(sMenuMessage);
+            sMenuMessage = "Total Ray Optimization Ratio: " + std::to_string((float)finalXYRayPoints.size() / (float)finalRayPoints.size() * 100.0f) + "%";
+			AddMessage(sMenuMessage);
+			AddMessage(sMenuMessageBreak);
+		}
+		
+		
 	}
 
 	void DisplayCredits()
