@@ -1208,7 +1208,6 @@ public:
 
 		if (sHideShowMenu.bShowFullLightGrid)
 		{
-			sHideShowMenu.bShowXYLightGrid = false;
 			if (loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == false)
 			{
 				if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
@@ -1224,7 +1223,6 @@ public:
 
 		if (sHideShowMenu.bShowXYLightGrid)
 		{
-			sHideShowMenu.bShowFullLightGrid = false;
 			if (loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == false)
 			{
 				if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
@@ -1237,9 +1235,6 @@ public:
 			}
 
 		}
-		
-
-		DrawFinalRayPoints();
 
 		// load menu messages
 		LoadDefaultMessagesFor3DWorld();
