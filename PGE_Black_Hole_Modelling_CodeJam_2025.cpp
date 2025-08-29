@@ -273,7 +273,8 @@ public:
 
 	std::vector<Ray3D> rays3D;
 
-	std::vector<std::pair<olc::vf3d, int32_t>> finalRayPoints; // Points in the gravity grid
+	std::vector<std::pair<olc::vf3d, int32_t>> finalRayPoints; // Final Optimized points to draw the X/Y light ray disk
+	std::vector<std::pair<olc::vf3d, int32_t>> finalXYRayPoints; // Final Optimized points to draw the X/Y light ray disk
 
 	PGEBlackHole SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass); // Sagittarius A* black hole
 
@@ -405,9 +406,51 @@ public:
 
 	}
 
+	// Removes duplicate trail rays to optimize rendering
+	void OptimizeTrailRays(std::vector<Ray3D>& rays) {
+
+		const int32_t nRed = olc::RED.n;
+		const int32_t nYellow = olc::YELLOW.n;
+		const int32_t nWhite = olc::WHITE.n;
+		finalRayPoints.clear();
+		std::unordered_set<olc::vf3d> raysToRemove;
+
+		for (auto& ray : rays) {
+			raysToRemove.clear();
+			size_t N = ray.viewPortTrail.size();
+
+			if (N < 2) return;
+			for (size_t i = 1; i < N; ++i) {
+
+				const auto& p = ray.viewPortTrail[i];
+				auto result = raysToRemove.insert(p);
+
+				if (result.second)
+				{
+					if (std::abs(p.x) < 1.0)
+					{
+						finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, nRed));
+					}
+					else if (std::abs(p.y) < 1.0)
+					{
+						finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, nYellow));
+					}
+					else
+					{
+						finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, nWhite));
+					}
+
+				}
+					
+					
+			}
+		}
+	}
+
 	// Removes tail rays that are outside of the X/Y bounds to optimize rendering
 	void OptimizeTrailRaysForXYAxis(std::vector<Ray3D>& rays) {
 
+		finalXYRayPoints.clear();
 		std::unordered_set<olc::vf3d> raysToRemove;
 		for (auto& ray : rays) {
 			raysToRemove.clear();
@@ -420,8 +463,8 @@ public:
 				auto result = raysToRemove.insert(p);
 				if(result.second) {
 					
-					if (std::abs(p.x) < 1.0) finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
-					if (std::abs(p.y) < 1.0)finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
+					if (std::abs(p.x) < 1.0) finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
+					if (std::abs(p.y) < 1.0) finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
 				}
 				
 
@@ -432,7 +475,7 @@ public:
 	// Draws all final ray points in 3D space
 	void DrawFinalRayPoints()
 	{
-		for (const auto& p : finalRayPoints)
+		for (const auto& p : finalXYRayPoints)
 		{
 			HW3D_DrawLine((mf4dWorld).m, { p.first.x, p.first.y, p.first.z }, { p.first.x + 0.01f, p.first.y, p.first.z }, p.second);
 		}
@@ -442,50 +485,16 @@ public:
 	// Draws all rays and trail rays in 3D space using multithreading
 	void DrawRays3Ds_Threaded(const std::vector<Ray3D>& rays)
 	{
-		const float screenW = float(ScreenWidth());
-		const float screenH = float(ScreenHeight());
-		const float invWorldX = 1.0f / float(WorldX);
-		const float invWorldY = 1.0f / float(WorldY);
-		const float invWorldZ = 1.0f / float(WorldZ);
-		const float scale = 0.01f;
+		const int32_t nRed = olc::RED.n;
+		const int32_t nYellow = olc::YELLOW.n;
+		const int32_t nWhite = olc::WHITE.n;
 
-		std::mutex draw_mutex;
-		auto draw_trail = [&](const Ray3D& ray) {
-			size_t N = ray.viewPortTrail.size();
-			if (N < 2) return;
-
-			for (size_t i = 1; i < N; ++i) {
-				float alpha = float(i) / float(N - 1);
-
-				const auto& p = ray.viewPortTrail[i];
-
-				{
-					std::lock_guard<std::mutex> lock(draw_mutex);
-					if (std::abs(p.x) < 1.0)
-					{
-
-						HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { p.x, p.y + 0.01f, p.z }, ray.Colour);
-					}
-					else if (std::abs(p.y) < 1.0)
-					{
-						HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { p.x + 0.01f, p.y, p.z }, olc::RED);
-					}
-					else
-					{
-						HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { p.x + 0.01f, p.y, p.z }, olc::WHITE);
-					}
-
-
-				}
-			}
-
-			};
-
-		std::vector<std::thread> threads;
-		for (const auto& ray : rays) {
-			threads.emplace_back(draw_trail, std::ref(ray));
+		for(auto& p : finalRayPoints)
+		{
+			HW3D_DrawLine((mf4dWorld).m, { p.first.x, p.first.y, p.first.z }, { p.first.x + 0.01f, p.first.y, p.first.z }, p.second);
 		}
-		for (auto& t : threads) t.join();
+
+		
 	}
 
 	// Draws a single ray step in 3D space using RK4 integration
@@ -1197,13 +1206,14 @@ public:
 		if (GetKey(olc::Key::SPACE).bPressed)
 		{
 			// TODO move to threading later
-			for (size_t i = 0; i < 30000; i++)
+			for (size_t i = 0; i < 10000; i++)
 			{
 				for (auto& ray : rays3D) {
 					RayStep3D(ray, 1.0f, SagittariusA.r_s);
 				}
 			}
 
+			OptimizeTrailRays(rays3D);
 			OptimizeTrailRaysForXYAxis(rays3D);
 
 		}
@@ -1257,6 +1267,7 @@ public:
 				RayStep3D(ray, 1.0f, SagittariusA.r_s);
 			}
 		}
+		OptimizeTrailRays(rays3D);
 		OptimizeTrailRaysForXYAxis(rays3D);
 		loadRaysStatus.bLoadingRays = false;
 		loadRaysStatus.bRaysLoaded = true;
