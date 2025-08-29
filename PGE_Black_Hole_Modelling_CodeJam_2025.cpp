@@ -29,7 +29,8 @@ const double dSagittariusAMass = 4.1e+6 * dSolarMass; // Mass of Sagittarius A* 
 double dArbitraryfactor = 2.5;			// Arbitrary factor for visualization of event horizon
 
 // The Light Ray initial position and direction that will loop around the black hole
-olc::vd3d vd2dLoopyLoop = { -1e+11, 3.13106302719999999e+10, 1e+11};
+olc::vd3d vd2dLoopyLoop2D = { -1e+11, 3.13106302719999999e+10, 0.0 };
+olc::vd3d vd2dLoopyLoop3D = { -1e+11, 3.13106302719999999e+10, 1e+11 };
 
 olc::vd3d vd2dConstLightDir = { C, 0.0, 0.0 };// Const Initial direction of the light ray (pointing right along the x-axis)
 
@@ -43,7 +44,7 @@ const double dScreenMToWorldVM = 1e+11;	// Conversion factor from Screen meters 
 double WorldX = 0;					// Width of the viewport in meters  
 double WorldY = 0;					// Height of the viewport in meters
 double WorldZ = 0;					// Deph of the viewport in meters
-         
+
 
 // Mutex for thread safety
 std::mutex draw_mutex;
@@ -130,7 +131,7 @@ public:
 	olc::vf3d vf3dGravityGridScale = { 10.0f, 10.0f, 10.0f };		// vf3d Gravity Grid Scale (in sort its Size)
 	olc::vf3d vf3dGravityGridLocation = { 0.0f, -2.5f, 0.0f };	// vf3d Gravity Grid Location
 	olc::vf3d vf3dGravityGridOffset = { 0.0f, 0.0f, 0.0f };		// vf3d Gravity Grid Offset
-	
+
 
 	// Sphere default properties
 	float fSphereRoC = 0.5f;				// Sphere Rate of Change
@@ -224,7 +225,7 @@ public:
 			trail.push_back(Position);
 		}
 	};
-	
+
 	std::vector<Ray2D> rays2D;
 
 	struct Ray3D {
@@ -254,7 +255,7 @@ public:
 
 			// Convert direction to polar velocities
 			float dx = Direction.x, dy = Direction.y, dz = Direction.z;
-			
+
 			dtheta = (cos(theta) * cos(phi) * dx + cos(theta) * sin(phi) * dy - sin(theta) * dz) / r;
 			dphi = (-sin(phi) * dx + cos(phi) * dy) / (r * sin(theta));
 
@@ -278,9 +279,29 @@ public:
 
 public:
 
-	
-	
 	// Some drawing functions
+
+	// GUI Menu options
+	struct sHideShowMenu {
+		bool bShow2DWorld = false;			// Show/Hide 2D World tottle for 3D
+		bool bShowGravityGrid = true;		// Show/Hide Gravity Gride
+		bool bShowBlackHole = true;			// Show/Hide Black Hole Center
+		bool bShowEventHorizon = true;		// Show/Hide Event Horizon
+		bool bShowXYLightGrid = true;		// Show/Hide XY Light Grid
+		bool bShowFullGrid = false;			// Show/Hide Full Grid
+		bool bShowXDisk = false;			// Show/Hide X Disk
+		bool bShowYDisk = false;			// Show/Hide Y Disk
+		bool bShowSun = false;				// Show/Hide Sun
+		bool bShowStars = true;				// Show/Hide Stars
+		bool bShowEarth = false;			// Show/Hide Earth
+		bool bShowDebugObjects = true;		// Show/Hide Debug Objects
+		bool bPause2DRay = false;			// Run/Pause the 2d Ray
+	} sHideShowMenu;
+
+	// Menu messages break
+	std::string sMenuMessageBreak = "----------------------------------";
+
+
 	olc::Renderable CreateBlackHoleEventHorizon(float radius) {
 		olc::Renderable ren;
 		ren.Create((radius * 2) + 2, (radius * 2) + 2);
@@ -293,18 +314,37 @@ public:
 		return ren;
 	}
 
-	void DrawRays2D(const std::vector<Ray2D>& rays) {
+	void DrawRays2D(std::vector<Ray2D>& rays) {
 		// draw current ray positions as points
 		float screenX = 0;
 		float screenY = 0;
+		float lastScreenX = 0;
+		float lastScreenY = 0;
+		float minScreenX = -10.0f;
+		float minScreenY = -10.0f;
+		float maxScreenX = ScreenWidth() + 100.0f;
+		float maxScreenY = ScreenHeight() + 100.0f;
+		olc::vf2d centerScreen = { ScreenWidth() / 2.0f, ScreenHeight() / 2.0f };
 		float alpha = 1.0f;
+		bool outOfBounds = false;
 
-		for (const auto& ray : rays) {
-			screenX = int32_t((ray.Position.x / WorldX + 0.5) * ScreenWidth());
-			screenY = int32_t((ray.Position.y / WorldZ + 0.5) * ScreenHeight());
-			DrawLineDecal(centreScreenPos, { screenX, screenY }, olc::WHITE);
-			DrawLineDecal({ screenX, screenY }, { screenX + 1, screenY }, olc::WHITE);
-			//Draw(screenX, screenY, olc::WHITE);
+		for (auto& ray : rays) {
+			screenX = float((ray.Position.x / WorldX + 0.5) * ScreenWidth());
+			screenY = float((ray.Position.y / WorldZ + 0.5) * ScreenHeight());
+
+
+			if (screenX < minScreenX || screenX > maxScreenX || screenY < minScreenY || screenY > maxScreenY) {
+
+				auto first = ray.trail[0];
+				ray.trail.clear(); // clear trail if out of bounds
+				ray.trail.push_back(first); // keep the first point to avoid empty trail
+				outOfBounds = true;
+				//rays.erase(std::remove(rays.begin(), rays.end(), ray), rays.end()); // remove the ray from the list
+
+				continue; // skip drawing this ray
+			}
+
+
 		}
 
 		// draw each trail with fading alpha
@@ -312,19 +352,25 @@ public:
 			size_t N = ray.trail.size();
 			if (N < 2) continue;
 
-			for (size_t i = 0; i < N; ++i) {
+			for (size_t i = 1; i < N; ++i) {
 				// older points (i=0) get alpha≈0, newer get alpha≈1
 				alpha = float(i) / float(N - 1);
 				// convert world coords to screen coords
-				screenX = int32_t((ray.trail[i].x / WorldX + 0.5) * ScreenWidth());
-				screenY = int32_t((ray.trail[i].y / WorldY + 0.5) * ScreenHeight());
+				screenX = float((ray.trail[i].x / WorldX + 0.5) * ScreenWidth());
+				screenY = float((ray.trail[i].y / WorldY + 0.5) * ScreenHeight());
+				lastScreenX = float((ray.trail[i - 1].x / WorldX + 0.5) * ScreenWidth());
+				lastScreenY = float((ray.trail[i - 1].y / WorldY + 0.5) * ScreenHeight());
 				DrawLineDecal({ screenX, screenY }, { screenX + 1, screenY }, olc::PixelF(1.0f, 1.0f, 1.0f, std::max(alpha, 0.05f)));
-
 			}
+
+			DrawLineDecal(centerScreen, { lastScreenX, lastScreenY }, olc::WHITE);
 
 		}
 
+
+
 	}
+
 	void RayStep2D(Ray2D& ray, double d, double rs) {
 		// 1) integrate (r,φ,dr,dφ)
 		if (ray.r <= rs) return; // stop if inside the event horizon
@@ -338,7 +384,6 @@ public:
 		ray.trail.push_back(ray.Position);
 	}
 
-
 	// Draws a single ray in 3D space
 	void DrawRay3D(const Ray3D& ray) {
 		// draw current ray positions as points
@@ -350,15 +395,14 @@ public:
 		float LastScreenZ = 0;
 		float alpha = 1.0f;
 
-		screenX = ray.ViewPortPosition.x; 
-		screenY = ray.ViewPortPosition.y; 
-		screenZ = ray.ViewPortPosition.z; 
+		screenX = ray.ViewPortPosition.x;
+		screenY = ray.ViewPortPosition.y;
+		screenZ = ray.ViewPortPosition.z;
 
 		HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { screenX, screenY, screenZ }, olc::YELLOW);
 
 
 	}
-
 
 	// Removes tail rays that are outside of the X/Y bounds to optimize rendering
 	void RemoveTrailRays3D(std::vector<Ray3D>& rays) {
@@ -367,7 +411,7 @@ public:
 			if (N < 2) return;
 
 			for (size_t i = 1; i < N; ++i) {
-				
+
 				const auto& p = ray.viewPortTrail[i];
 				if (std::abs(p.x) < 1.0)
 				{
@@ -377,7 +421,7 @@ public:
 				{
 					finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
 				}
-				
+
 			}
 		}
 	}
@@ -389,11 +433,11 @@ public:
 		{
 			HW3D_DrawLine((mf4dWorld).m, { p.first.x, p.first.y, p.first.z }, { p.first.x + 0.01f, p.first.y, p.first.z }, p.second);
 		}
-		
+
 	}
 
 	// Draws all rays and trail rays in 3D space using multithreading
-    void DrawRays3Ds_Threaded(const std::vector<Ray3D>& rays) 
+	void DrawRays3Ds_Threaded(const std::vector<Ray3D>& rays)
 	{
 		const float screenW = float(ScreenWidth());
 		const float screenH = float(ScreenHeight());
@@ -427,23 +471,23 @@ public:
 					{
 						HW3D_DrawLine((mf4dWorld).m, { p.x, p.y, p.z }, { p.x + 0.01f, p.y, p.z }, olc::WHITE);
 					}
-					
-					
+
+
 				}
 			}
 
-		};
+			};
 
 		std::vector<std::thread> threads;
 		for (const auto& ray : rays) {
 			threads.emplace_back(draw_trail, std::ref(ray));
 		}
 		for (auto& t : threads) t.join();
-    }
-		
+	}
 
-    void RayStep3D(Ray3D& ray, double d, double rs) {
-		
+	// Draws a single ray step in 3D space using RK4 integration
+	void RayStep3D(Ray3D& ray, double d, double rs) {
+
 
 		if (ray.r <= rs) return; // stop if inside the event horizon
 		rk4Step3D(ray, d, rs);
@@ -453,10 +497,11 @@ public:
 		ray.WorldViewPosition.z = ray.r * cos(ray.theta);
 
 		ray.viewPortTrail.push_back(ConvertWorldViewPosToViewPortPos(ray.WorldViewPosition));
-    }
+	}
 
-    olc::vd3d ConvertWorldViewPosToViewPortPos(const olc::vd3d& worldPos) {
-		
+	// Converts world view position to view port position
+	olc::vd3d ConvertWorldViewPosToViewPortPos(const olc::vd3d& worldPos) {
+
 		const float invWorldVM = 1.0f / float(dScreenMToWorldVM);
 		const float screenW = float(ScreenWidth());
 		const float screenH = float(ScreenHeight());
@@ -466,12 +511,13 @@ public:
 		const float y = float(worldPos.y) * invWorldVM * screenH * scale;
 		const float z = float(worldPos.z) * invWorldVM * screenW * scale;
 		return { x, y, z };
-    }
+	}
 
-    olc::vd3d ConvertViewPortPosToWorldViewPos(const olc::vd3d& viewPortPos) {
-		const float invScreenW = 1.0f / float(ScreenWidth());
-		const float invScreenH = 1.0f / float(ScreenHeight());
-		const float scale = 0.01f;
+	// Converts view port position to world view position
+	olc::vd3d ConvertViewPortPosToWorldViewPos(const olc::vd3d& viewPortPos) {
+		const double invScreenW = 1.0f / float(ScreenWidth());
+		const double invScreenH = 1.0f / float(ScreenHeight());
+		const double scale = 0.01f;
 		const double factorW = dScreenMToWorldVM * invScreenW / scale;
 		const double factorH = dScreenMToWorldVM * invScreenH / scale;
 		return {
@@ -479,11 +525,15 @@ public:
 			viewPortPos.y * factorH,
 			viewPortPos.z * factorW
 		};
-    }
+	}
 
+	/*
+	* Creates a left - handed cross text map image for skybox, using 6 images file paths
+	* Important: Order of images: left, top, front, bottom, right, back
+	*/
 	olc::Sprite* CreateLeftCrossTextMapImage(
 		std::string left, std::string top,
-		std::string front, std::string bottom, 
+		std::string front, std::string bottom,
 		std::string right, std::string back)
 	{
 		/*
@@ -503,7 +553,7 @@ public:
 		olc::Sprite* skyCube = new olc::Sprite(sprleft->width * 4, sprleft->height * 3);
 		SetDrawTarget(skyCube);
 		Clear(olc::BLANK);
-		
+
 		// Left
 		DrawSprite(0, sprleft->height, sprleft);
 		// Top
@@ -516,7 +566,9 @@ public:
 		DrawSprite(sprleft->width * 2, sprleft->height, sprright);
 		// Back
 		DrawSprite(sprleft->width * 3, sprleft->height, sprback);
-		
+
+		SetDrawTarget(nullptr);
+
 		return skyCube;
 	}
 
@@ -525,10 +577,10 @@ public:
 
 	/* 2D Light Rays*/
 	/*
-	* The geodesicRHS function computes the right-hand side of the geodesic equations for a given ray in a Schwarzschild spacetime, 
+	* The geodesicRHS function computes the right-hand side of the geodesic equations for a given ray in a Schwarzschild spacetime,
 	* updating the provided rhs array with derivatives of the ray's position and angular momentum.
 	*/
-	void geodesicRHS2D(const Ray2D& ray, double rhs[4], double rs) 
+	void geodesicRHS2D(const Ray2D& ray, double rhs[4], double rs)
 	{
 		double r = ray.r;
 		double dr = ray.dr;
@@ -553,6 +605,7 @@ public:
 		rhs[3] = -2.0 * dr * dphi / r;
 	}
 
+	// Helper function to add four state arrays used tn RK4 integration to get the best estimate of the next state
 	void addState2D(const double a[4], const double b[4], double factor, double out[4])
 	{
 		for (int i = 0; i < 4; i++)
@@ -560,10 +613,10 @@ public:
 	}
 
 	/*
-	* The rk4Step function implements a single step of the Runge-Kutta 4th order method to update the state of a Ray object 
+	* The rk4Step function implements a single step of the Runge-Kutta 4th order method to update the state of a Ray object
 	* based on its current properties and a given time step.
 	*/
-	void rk4Step2D(Ray2D& ray, double d, double rs) 
+	void rk4Step2D(Ray2D& ray, double d, double rs)
 	{
 		double y0[4] = { ray.r, ray.phi, ray.dr, ray.dphi };
 		double k1[4], k2[4], k3[4], k4[4], temp[4];
@@ -631,42 +684,42 @@ public:
 	* The rk4Step function implements a single step of the Runge-Kutta 4th order method to update the state of a Ray object
 	* based on its current properties and a given time step.
 	*/
-    // Updated RK4 step for 3D geodesics (r, theta, phi, dr, dtheta, dphi)
-    void rk4Step3D(Ray3D& ray, double d, double rs)
-    {
-        // State vector: [r, theta, phi, dr, dtheta, dphi]
-        double y0[6] = { ray.r, ray.theta, ray.phi, ray.dr, ray.dtheta, ray.dphi };
-        double k1[6], k2[6], k3[6], k4[6], temp[6];
+	// Updated RK4 step for 3D geodesics (r, theta, phi, dr, dtheta, dphi)
+	void rk4Step3D(Ray3D& ray, double d, double rs)
+	{
+		// State vector: [r, theta, phi, dr, dtheta, dphi]
+		double y0[6] = { ray.r, ray.theta, ray.phi, ray.dr, ray.dtheta, ray.dphi };
+		double k1[6], k2[6], k3[6], k4[6], temp[6];
 
-        geodesicRHS3D(ray, k1, rs);
-        for (int i = 0; i < 6; ++i) temp[i] = y0[i] + k1[i] * (d / 2.0);
-        Ray3D r2 = ray;
-        r2.r = temp[0]; r2.theta = temp[1]; r2.phi = temp[2];
-        r2.dr = temp[3]; r2.dtheta = temp[4]; r2.dphi = temp[5];
-        geodesicRHS3D(r2, k2, rs);
+		geodesicRHS3D(ray, k1, rs);
+		for (int i = 0; i < 6; ++i) temp[i] = y0[i] + k1[i] * (d / 2.0);
+		Ray3D r2 = ray;
+		r2.r = temp[0]; r2.theta = temp[1]; r2.phi = temp[2];
+		r2.dr = temp[3]; r2.dtheta = temp[4]; r2.dphi = temp[5];
+		geodesicRHS3D(r2, k2, rs);
 
-        for (int i = 0; i < 6; ++i) temp[i] = y0[i] + k2[i] * (d / 2.0);
-        Ray3D r3 = ray;
-        r3.r = temp[0]; r3.theta = temp[1]; r3.phi = temp[2];
-        r3.dr = temp[3]; r3.dtheta = temp[4]; r3.dphi = temp[5];
-        geodesicRHS3D(r3, k3, rs);
+		for (int i = 0; i < 6; ++i) temp[i] = y0[i] + k2[i] * (d / 2.0);
+		Ray3D r3 = ray;
+		r3.r = temp[0]; r3.theta = temp[1]; r3.phi = temp[2];
+		r3.dr = temp[3]; r3.dtheta = temp[4]; r3.dphi = temp[5];
+		geodesicRHS3D(r3, k3, rs);
 
-        for (int i = 0; i < 6; ++i) temp[i] = y0[i] + k3[i] * d;
-        Ray3D r4 = ray;
-        r4.r = temp[0]; r4.theta = temp[1]; r4.phi = temp[2];
-        r4.dr = temp[3]; r4.dtheta = temp[4]; r4.dphi = temp[5];
-        geodesicRHS3D(r4, k4, rs);
+		for (int i = 0; i < 6; ++i) temp[i] = y0[i] + k3[i] * d;
+		Ray3D r4 = ray;
+		r4.r = temp[0]; r4.theta = temp[1]; r4.phi = temp[2];
+		r4.dr = temp[3]; r4.dtheta = temp[4]; r4.dphi = temp[5];
+		geodesicRHS3D(r4, k4, rs);
 
-        for (int i = 0; i < 6; ++i)
-            y0[i] += (d / 6.0) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]);
+		for (int i = 0; i < 6; ++i)
+			y0[i] += (d / 6.0) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]);
 
-        ray.r = y0[0];
-        ray.theta = y0[1];
-        ray.phi = y0[2];
-        ray.dr = y0[3];
-        ray.dtheta = y0[4];
-        ray.dphi = y0[5];
-    }
+		ray.r = y0[0];
+		ray.theta = y0[1];
+		ray.phi = y0[2];
+		ray.dr = y0[3];
+		ray.dtheta = y0[4];
+		ray.dphi = y0[5];
+	}
 
 	/* End 3D Light Rays*/
 
@@ -685,6 +738,13 @@ public:
 
 
 public:
+	// Load Rays Status
+	struct sLoadRaysStatus {
+		bool bLoadingRays = false;
+		bool bRaysLoaded = false;
+		bool bOptimizingRays = false;
+		bool bOptimizedRays = false;
+	} loadRaysStatus;
 
 	// Load any 3D objects here
 	void Load3DObjects()
@@ -698,7 +758,7 @@ public:
 		{
 			meshSpaceGrid = *t;
 		}
-		
+
 		// Create required matrices
 		meshSphere = olc::utils::hw3d::CreateSphere();								// Default sphere
 		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);		// Default Event Horizon
@@ -712,7 +772,7 @@ public:
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
 		renEventHorizon.Load("assets/images/NASA_2020_4k.jpg");
 		renSkyCube.Load("assets/images/spacetexture.png");
-		renBlackHoleDecal = CreateBlackHoleEventHorizon(1.0f);
+		renBlackHoleDecal = CreateBlackHoleEventHorizon(10.0f);
 		renBackGround.Load("assets/images/starmap_2020_4k_updated.png");
 
 		/*auto skyCubeImage = CreateLeftCrossTextMapImage(
@@ -727,7 +787,7 @@ public:
 		renSkyCube.Sprite()->pColData.swap(skyCubeImage->pColData);
 		renSkyCube.Decal()->Update();
 		delete skyCubeImage;*/
-		
+
 		// Load Properties for Renderables
 		vf3dCubeBLCorner = getCubeCornerFromCenter(vf3dCubeBLCorner, 10.0f);
 	}
@@ -858,10 +918,8 @@ public:
 
 	}
 
-	/*
-	* Displays messages on the screen
-	*/
-	void DisplayMessages()
+	// Loads default messages for display
+	void LoadDefaultMessages()
 	{
 		nFrameCount = GetFPS();
 
@@ -870,10 +928,24 @@ public:
 
 		sMessage = sAppName + " - FPS: " + std::to_string(nFrameCount);
 		vecMessages.push_back(sMessage);
+	}
 
+	void AddMessage(const std::string& message)
+	{
+		vecMessages.push_back(message);
+	}
 
-		sMessage = "---";
-		vecMessages.push_back(sMessage);
+	/*
+	* Displays messages on the screen
+	*/
+	void DisplayMessages()
+	{
+		std::string sMenuMessage = sMenuMessageBreak;
+		AddMessage(sMenuMessage);
+
+		sMenuMessage = "Press ESC to quit";
+		AddMessage(sMenuMessage);
+		sMenuMessage = sMenuMessageBreak;
 
 		fStep = 10;
 		vf2MessPos.y = fStep;
@@ -884,6 +956,8 @@ public:
 		}
 		vecMessages.clear();
 
+		// Draw Logo
+		DrawDecal({ 5.0f, (float)ScreenHeight() - 100 }, renOLCPGEMobLogo.Decal(), { 0.5f, 0.5f });
 
 	}
 
@@ -892,7 +966,7 @@ public:
 	{
 
 		// Setup up worldview parameters
-		WorldX = double((ScreenWidth() * 2.0) / dKMtoMeters)* dScreenMToWorldVM;	// Width of the WorldView in meters
+		WorldX = double((ScreenWidth() * 2.0) / dKMtoMeters) * dScreenMToWorldVM;	// Width of the WorldView in meters
 		WorldY = double((ScreenHeight() * 2.0) / dKMtoMeters) * dScreenMToWorldVM;	// Height of the WorldView in meters
 		WorldZ = WorldX; // a little hacky but we what our graviry grid to be square, hence WorldX = WorldZ
 
@@ -914,8 +988,8 @@ public:
 		Load3DObjects();
 
 		// Load any sprites, decals or renderables here
-		//renOLCPGEMobLogo.Load("assets/images/olcpgemob.png");  //TODO add logo
-		
+		renOLCPGEMobLogo.Load("assets/images/olcpgemob.png");  //TODO add logo
+
 
 		/*
 			Sagittarius A*, the supermassive black hole at the center of our Milky Way galaxy, and has an estimated mass of approximately 4.154 million solar masses.
@@ -929,9 +1003,11 @@ public:
 		*/
 		SagittariusA = PGEBlackHole({ 0.0, 0.0, 0.0 }, dSagittariusAMass);
 
-		rays2D.push_back(Ray2D(vd2dLoopyLoop, vd2dConstLightDir, SagittariusA));
+		// Create some 2D rays
+		rays2D.push_back(Ray2D(vd2dLoopyLoop2D, vd2dConstLightDir, SagittariusA));
 
-		// Create the Black Hole Sphere
+		// Creae some 3D rays
+		rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
 
 		return true;
 	}
@@ -940,8 +1016,87 @@ public:
 	{
 		SetDrawTarget(nullptr);
 		Clear(olc::BLACK);
-			
 
+		// Load te default messages
+		LoadDefaultMessages();
+
+		if (GetKey(olc::Key::S).bPressed)
+		{
+			rays2D.clear();
+			rays2D.push_back(Ray2D(vd2dLoopyLoop2D, vd2dConstLightDir, SagittariusA));
+			sHideShowMenu.bShow2DWorld = !sHideShowMenu.bShow2DWorld;
+		}
+		if (sHideShowMenu.bShow2DWorld)
+		{
+			Display2DWorld(fElapsedTime);
+		}
+		else
+		{
+			Display3DWorld(fElapsedTime);
+		}
+
+
+		// Update Camera by user input
+		UpdateCamByUserInput(fElapsedTime);
+
+		// Display Messages
+		DisplayMessages();
+
+		// Ensure we can exit
+		if (GetKey(olc::Key::ESCAPE).bPressed)
+		{
+			return false;
+		}
+		return true;
+	}
+
+
+	void DisplayMainMenu(float fElapsedTime)
+	{
+		// TODO add a main menu
+	}
+
+	// Shows the 2D world with rays
+	void Display2DWorld(float fElapsedTime)
+	{
+		std::string sMenuMessage = "Press S to show 3D World";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "Press R to reset ray";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "Press Spacebar pause/run the light ray";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "---";
+		AddMessage(sMenuMessage);
+
+
+		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
+		DrawDecal(vCenterPos - olc::vf2d(renBlackHoleDecal.Sprite()->width / 2.0f, renBlackHoleDecal.Sprite()->height / 2.0f), renBlackHoleDecal.Decal());
+
+		if (GetKey(olc::Key::R).bPressed)
+		{
+			rays2D.clear();
+			// Create some 2D rays
+			rays2D.push_back(Ray2D(vd2dLoopyLoop2D, vd2dConstLightDir, SagittariusA));
+		}
+
+
+		if (GetKey(olc::Key::SPACE).bPressed)
+			sHideShowMenu.bPause2DRay = !sHideShowMenu.bPause2DRay;
+
+		if (sHideShowMenu.bPause2DRay)
+		{
+			for (auto& ray : rays2D) {
+				RayStep2D(ray, 1.0f, SagittariusA.r_s);
+				DrawRays2D(rays2D);
+			}
+		}
+
+	}
+
+	// Shows the 3D world 
+	void Display3DWorld(float fElapsedTime)
+	{
+		
 		// 3D Render section
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
 		olc::mf4d mCubeTrans, mCubeScale;
@@ -959,7 +1114,7 @@ public:
 		mEventHozScale.scale(vf3dEventHorizonScale);
 		mEventHozRotationY.rotateY(fTheta);
 		mEventHozRotationX.rotateX(fYaw);
-		
+
 		mf4dEventHorizon = mEventHozTrans * mEventHozScale * mEventHozRotationY; // Rotate the Sphere into the correct North/South pole position
 		mf4dEventHorizon = mf4dEventHorizon * mEventHozRotationX;
 		mEventHozRotationZ.rotateZ(fTheta);
@@ -1003,39 +1158,40 @@ public:
 		HW3D_Projection(Cam3D.GetProjectionMatrix().m);
 
 		// Draw the Background Shere
-		HW3D_DrawObject((mf4dWorld * mf4dBackGround).m, renBackGround.Decal(), meshBackGround.layout, meshBackGround.pos, meshBackGround.uv, meshBackGround.col);
-				
+		if (sHideShowMenu.bShowStars)
+			HW3D_DrawObject((mf4dWorld * mf4dBackGround).m, renBackGround.Decal(), meshBackGround.layout, meshBackGround.pos, meshBackGround.uv, meshBackGround.col);
+
 
 		// Draw the black hole
-		HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, nullptr, meshBlackHole.layout, meshBlackHole.pos, meshBlackHole.uv, meshBlackHole.col);
+		if (sHideShowMenu.bShowBlackHole)
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, nullptr, meshBlackHole.layout, meshBlackHole.pos, meshBlackHole.uv, meshBlackHole.col);
 
 		// Draw the Event Horizon
-		HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renStar.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
+		if (sHideShowMenu.bShowEventHorizon)
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renStar.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
 
 
 		// Draw the Gravity Grid
-		HW3D_DrawObject((mf4dWorld * mf4dGravityGrid).m, nullptr, meshGravityGrid.layout, meshGravityGrid.pos, meshGravityGrid.uv, meshGravityGrid.col);
+		if (sHideShowMenu.bShowGravityGrid)
+			HW3D_DrawObject((mf4dWorld * mf4dGravityGrid).m, nullptr, meshGravityGrid.layout, meshGravityGrid.pos, meshGravityGrid.uv, meshGravityGrid.col);
 
 
-		// dRAW SOME LINES AND BOXES FOR DEBUGGING
-		HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { 100.0f, 100.0f, 100.0f }, olc::RED);
-
-		HW3D_DrawLineBox((mf4dWorld).m, { -vf3dCubeBLCorner.x, -vf3dCubeBLCorner.y, -vf3dCubeBLCorner.z }, { 10.0f, 10.0f, 10.0f }, olc::YELLOW);
-
-
-		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
-		//DrawDecal(vCenterPos - olc::vf2d(renBlackHoleDecal.Sprite()->width / 2.0f, renBlackHoleDecal.Sprite()->height / 2.0f), renBlackHoleDecal.Decal());
+		// Some debugging lines and boxes
+		if (sHideShowMenu.bShowDebugObjects)
+		{
+			HW3D_DrawLine((mf4dWorld).m, { 0.0f, 0.0f, 0.0f }, { 100.0f, 100.0f, 100.0f }, olc::RED);
+			HW3D_DrawLineBox((mf4dWorld).m, { -vf3dCubeBLCorner.x, -vf3dCubeBLCorner.y, -vf3dCubeBLCorner.z }, { 10.0f, 10.0f, 10.0f }, olc::YELLOW);
+		}
 
 		if (GetKey(olc::Key::R).bPressed)
 		{
 			rays3D.clear();
-			rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
-			//rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirY, SagittariusA, olc::RED.n));
-			//rays3D.push_back(Ray3D(vd2dLoopyLoop, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop), vd2dConstLightDirZ, SagittariusA));
+			rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
 		}
+
 		if (GetKey(olc::Key::SPACE).bPressed)
 		{
-			// creates 10,000 rays 
+			// TODO move to threading later
 			for (size_t i = 0; i < 30000; i++)
 			{
 				for (auto& ray : rays3D) {
@@ -1044,29 +1200,74 @@ public:
 			}
 
 			RemoveTrailRays3D(rays3D);
-    			
+
 		}
 
 		DrawRays3Ds_Threaded(rays3D);
 
-		//DrawFinalRayPoints();
+		DrawFinalRayPoints();
 
-		if (GetKey(olc::Key::ESCAPE).bPressed)
-		{
-			return false;
-		}
+		// load menu messages
+		LoadDefaultMessagesFor3DWorld();
 
+		// Load Options Menu
+		LoadOptionsMenuFor3DWorld();
 
-		// Update Camera by user input
-		UpdateCamByUserInput(fElapsedTime);
-
-		// Display Messages
-		DisplayMessages();
-
-		return true;
 	}
 
+	// Loads default messages for the 3D world
+	void LoadDefaultMessagesFor3DWorld()
+	{
+		std::string sMenuMessage = "Press S to show/hide 2D World";
+		AddMessage(sMenuMessage);
+		AddMessage(sMenuMessageBreak);
+		sMenuMessage = ("Use left mouse (touch) to look around");
+		AddMessage(sMenuMessage);
+		sMenuMessage = ("Use right mouse (touch) or up/down arrows to move forward/backward");
+		AddMessage(sMenuMessage);
+		sMenuMessage = ("Use left/right arrows to strife left/right");
+		AddMessage(sMenuMessage);
+		sMenuMessage = ("Use U/B keys to move up/down");
+		AddMessage(sMenuMessage);
+		sMenuMessage = "Press R to reset ray";
+		AddMessage(sMenuMessage);
+		AddMessage(sMenuMessageBreak);
 
+	}
+
+	// Loads the options menu for the 3D world
+	void LoadOptionsMenuFor3DWorld()
+	{
+		std::string	sMenuMessage = "Press 1 to show/hide Event Horizon";
+		AddMessage(sMenuMessage);
+		if (GetKey(olc::Key::K1).bPressed)
+			sHideShowMenu.bShowEventHorizon = !sHideShowMenu.bShowEventHorizon;
+
+		sMenuMessage = "Press 2 to show/hide Black Hole";
+		AddMessage(sMenuMessage);
+		if (GetKey(olc::Key::K2).bPressed)
+			sHideShowMenu.bShowBlackHole = !sHideShowMenu.bShowBlackHole;
+
+		sMenuMessage = "Press 3 to show/hide Stars";
+		AddMessage(sMenuMessage);
+		if (GetKey(olc::Key::K3).bPressed)
+			sHideShowMenu.bShowStars = !sHideShowMenu.bShowStars;
+
+		sMenuMessage = "Press 4 to show/hide Gravity Grid";
+		AddMessage(sMenuMessage);
+		if (GetKey(olc::Key::K4).bPressed)
+			sHideShowMenu.bShowGravityGrid = !sHideShowMenu.bShowGravityGrid;
+
+		sMenuMessage = "Press 5 to show/hide Debug Objects";
+		AddMessage(sMenuMessage);
+		if (GetKey(olc::Key::K5).bPressed)
+			sHideShowMenu.bShowDebugObjects = !sHideShowMenu.bShowDebugObjects;
+	}
+
+	void DisplayCredits()
+	{
+		// TODO add credits display
+	}
 
 };
 
