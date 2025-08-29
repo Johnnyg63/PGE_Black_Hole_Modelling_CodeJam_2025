@@ -3,13 +3,13 @@
 #define OLC_PGE_APPLICATION
 #define OLC_IMAGE_STB
 #include "olcUTIL_Hardware3D.h"
-#include "olcPixelGameEngine.h"
-#include <immintrin.h>			
+#include "olcPixelGameEngine.h"		
 #define _USE_MATH_DEFINES 
 #include <cmath>				
 #include <vector>	
 #include <mutex>
 #include <thread>
+#include <unordered_set>
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif // M_PI
@@ -406,22 +406,24 @@ public:
 	}
 
 	// Removes tail rays that are outside of the X/Y bounds to optimize rendering
-	void RemoveTrailRays3D(std::vector<Ray3D>& rays) {
+	void OptimizeTrailRaysForXYAxis(std::vector<Ray3D>& rays) {
+
+		std::unordered_set<olc::vf3d> raysToRemove;
 		for (auto& ray : rays) {
+			raysToRemove.clear();
 			size_t N = ray.viewPortTrail.size();
 			if (N < 2) return;
 
 			for (size_t i = 1; i < N; ++i) {
 
 				const auto& p = ray.viewPortTrail[i];
-				if (std::abs(p.x) < 1.0)
-				{
-					finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
+				auto result = raysToRemove.insert(p);
+				if(result.second) {
+					
+					if (std::abs(p.x) < 1.0) finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
+					if (std::abs(p.y) < 1.0)finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
 				}
-				if (std::abs(p.y) < 1.0)
-				{
-					finalRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
-				}
+				
 
 			}
 		}
@@ -1202,7 +1204,7 @@ public:
 				}
 			}
 
-			RemoveTrailRays3D(rays3D);
+			OptimizeTrailRaysForXYAxis(rays3D);
 
 		}
 
@@ -1255,7 +1257,7 @@ public:
 				RayStep3D(ray, 1.0f, SagittariusA.r_s);
 			}
 		}
-		RemoveTrailRays3D(rays3D);
+		OptimizeTrailRaysForXYAxis(rays3D);
 		loadRaysStatus.bLoadingRays = false;
 		loadRaysStatus.bRaysLoaded = true;
 	}
