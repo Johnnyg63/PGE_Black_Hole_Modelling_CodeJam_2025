@@ -77,6 +77,7 @@ public:
 	olc::mf4d mf4dSphere;		// Matrix for Sphere (Sun, Stars etc)
 	olc::mf4d mf4dBackGround;	// Matrix for Background Space Grid
 	olc::mf4d mf4dEventHorizon; // Matrix for Event Horizon
+	olc::mf4d mf4dEventHorizonY; // Matrix for Event Horizon Y Axis rotation
 	olc::mf4d mf4dGravityGrid;	// Matrix for Gravity Grid
 	olc::mf4d mf4dProject;		// Projection Matrix
 
@@ -86,6 +87,7 @@ public:
 	olc::utils::hw3d::mesh meshSkyCube;		// Sky Cube Mesh
 	olc::utils::hw3d::mesh meshSphere;		// Sphere Mesh (black hole, Sun, Stars etc)
 	olc::utils::hw3d::mesh meshEventHorizon; // Event Horizon Mesh
+	olc::utils::hw3d::mesh meshEventHorizonY; // Event Horizon Y Axis Mesh
 	olc::utils::hw3d::mesh meshBlackHole;	// Black Hole Mesh
 	olc::utils::hw3d::mesh meshBackGround;	// Background Space Grid mesh
 	olc::utils::hw3d::mesh meshGravityGrid;	// Gravity Grid Mesh
@@ -158,6 +160,7 @@ public:
 	olc::Renderable renSkyCube;					// Sky Cube Renderable
 	olc::Renderable renBlackHoleDecal;			// Black Hole Decal Renderable
 	olc::Renderable renEventHorizon;			// Event Horizon Renderable
+	olc::Renderable renEventHorizonY;			// Event Horizon Y Axis Renderable
 	olc::Renderable renBackGround;				// Background Renderable
 	olc::Renderable renBackGround2D;			// 2D Background Renderable
 	/* End Reneders */
@@ -289,6 +292,8 @@ public:
 		bool bShowGravityGrid = true;		// Show/Hide Gravity Gride
 		bool bShowBlackHole = true;			// Show/Hide Black Hole Center
 		bool bShowEventHorizon = true;		// Show/Hide Event Horizon
+		bool bShowEventHorizonXAxis = true;	// Show/Hide Event Horizon X Axis
+		bool bShowEventHorizonYAxis = true;	// Show/Hide Event Horizon Y Axis
 		bool bShowXYLightGrid = false;		// Show/Hide XY Light Grid
 		bool bShowFullLightGrid = false;	// Show/Hide Full Grid
 		bool bShowXDisk = false;			// Show/Hide X Disk
@@ -776,6 +781,7 @@ public:
 		// Create required matrices
 		meshSphere = olc::utils::hw3d::CreateSphere();								// Default sphere
 		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);		// Default Event Horizon
+		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);		// Default Event Horizon
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
 		//meshGravityGrid = olc::utils::hw3d::CreateGrid(1.0f, 30);					// Default Grid
@@ -785,6 +791,7 @@ public:
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
 		renEventHorizon.Load("assets/images/NASA_2020_4k.jpg");
+		renEventHorizonY.Load("assets/images/SaturnMap.jpg");
 		renSkyCube.Load("assets/images/spacetexture.png");
 		renBlackHoleDecal = CreateBlackHoleEventHorizon(15.0f);
 		renBackGround2D.Load("assets/images/MilkyWay2D.jpg");
@@ -1184,7 +1191,11 @@ public:
 
 		// Draw the Event Horizon
 		if (sHideShowMenu.bShowEventHorizon)
-			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renStar.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizon.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
+
+		// Draw the Event Horizon Y Axis
+		if (sHideShowMenu.bShowEventHorizonYAxis)
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizonY.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
 
 
 		// Draw the Gravity Grid
