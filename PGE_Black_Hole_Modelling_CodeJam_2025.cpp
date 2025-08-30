@@ -87,6 +87,7 @@ public:
 	olc::utils::hw3d::mesh meshSkyCube;		// Sky Cube Mesh
 	olc::utils::hw3d::mesh meshSphere;		// Sphere Mesh (black hole, Sun, Stars etc)
 	olc::utils::hw3d::mesh meshEventHorizon; // Event Horizon Mesh
+	olc::utils::hw3d::mesh meshEventHorizonX; // Event Horizon  Axis Mesh
 	olc::utils::hw3d::mesh meshEventHorizonY; // Event Horizon Y Axis Mesh
 	olc::utils::hw3d::mesh meshBlackHole;	// Black Hole Mesh
 	olc::utils::hw3d::mesh meshBackGround;	// Background Space Grid mesh
@@ -160,6 +161,7 @@ public:
 	olc::Renderable renSkyCube;					// Sky Cube Renderable
 	olc::Renderable renBlackHoleDecal;			// Black Hole Decal Renderable
 	olc::Renderable renEventHorizon;			// Event Horizon Renderable
+	olc::Renderable renEventHorizonX;			// Event Horizon X Axis Renderable
 	olc::Renderable renEventHorizonY;			// Event Horizon Y Axis Renderable
 	olc::Renderable renBackGround;				// Background Renderable
 	olc::Renderable renBackGround2D;			// 2D Background Renderable
@@ -781,16 +783,18 @@ public:
 		// Create required matrices
 		meshSphere = olc::utils::hw3d::CreateSphere();								// Default sphere
 		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);		// Default Event Horizon
-		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);		// Default Event Horizon
+		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);	// Default Event Horizon X Axis
+		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);	// Default Event Horizon Y Axis
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
-		//meshGravityGrid = olc::utils::hw3d::CreateGrid(1.0f, 30);					// Default Grid
-		meshGravityGrid = olc::utils::hw3d::CreateGrid(25.0f, 50);
+		meshGravityGrid = olc::utils::hw3d::CreateGrid(25.0f, 50);					// Default Grid
+		
 
 
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
 		renEventHorizon.Load("assets/images/NASA_2020_4k.jpg");
+		renEventHorizonX.Load("assets/images/SaturnMap.jpg");
 		renEventHorizonY.Load("assets/images/SaturnMap.jpg");
 		renSkyCube.Load("assets/images/spacetexture.png");
 		renBlackHoleDecal = CreateBlackHoleEventHorizon(15.0f);
@@ -1122,12 +1126,8 @@ public:
 		
 		// 3D Render section
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
-		olc::mf4d mCubeTrans, mCubeScale;
-		olc::mf4d mf4dSkyCubeTrans, mf4dSkyCubeScale, mf4dSkyCubeRotationX, mf4dSkyCubeRotationY, mf4dSkyCubeRotationZ;
 		olc::mf4d mSphereTrans, mSphereScale, mSphereRotationX, mSphereRotationY, mSphereRotationZ;
 		olc::mf4d mEventHozTrans, mEventHozScale, mEventHozRotationX, mEventHozRotationY, mEventHozRotationZ;
-		olc::mf4d mPosition, mCollision;
-		olc::mf4d mMovement, mOffset;
 		olc::mf4d mBackGroundTrans, mBackGroundScale, mBackGroundRotationX, mBackGroundRotationY, mBackGroundRotationZ;
 		olc::mf4d mGravityGridTrans, mGravityGridScale, mGravityGridRotationX, mGravityGridRotationY, mGravityGridRotationZ;
 
@@ -1142,6 +1142,8 @@ public:
 		mf4dEventHorizon = mf4dEventHorizon * mEventHozRotationX;
 		mEventHozRotationZ.rotateZ(fTheta);
 		mf4dEventHorizon = mf4dEventHorizon * mEventHozRotationZ;
+
+
 
 		// Setup Grid
 		mGravityGridTrans.translate(vf3dGravityGridLocation);
@@ -1195,7 +1197,7 @@ public:
 
 		// Draw the Event Horizon Y Axis
 		if (sHideShowMenu.bShowEventHorizonYAxis)
-			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizonY.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizonY.Decal(), meshEventHorizonY.layout, meshEventHorizonY.pos, meshEventHorizonY.uv, meshEventHorizonY.col);
 
 
 		// Draw the Gravity Grid
