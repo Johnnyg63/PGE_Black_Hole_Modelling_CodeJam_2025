@@ -48,7 +48,7 @@ const float Deg90ToRad = float(M_PI / 2.0); // 90 Degrees to Radians conversion
 const float Deg180ToRad = float(M_PI);      // 180 Degrees to Radians conversion
 const float Deg270ToRad = float(3.0 * M_PI / 2.0); // 270 Degrees to Radians conversion
 const float Deg360ToRad = float(2.0 * M_PI); // 360 Degrees to Radians conversion
-const float RadAngleOfAttack = float(-15.0 * M_PI / 180.0); // -15 degree angle of attack for light rays
+const float RadAngleOfAttack = float(-5.0 * M_PI / 180.0); // -5 degree angle of attack better view experince
 double WorldX = 0;					// Width of the viewport in meters  
 double WorldY = 0;					// Height of the viewport in meters
 double WorldZ = 0;					// Deph of the viewport in meters
@@ -104,10 +104,10 @@ public:
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
-	olc::vf3d vf3dCamera = { 0.0f, 15.0f, -80.0f };    // vf3d camera direction
+	olc::vf3d vf3dCamera = { 0.0f, 1.0f, -80.0f };    // vf3d camera direction
 	olc::vf3d vf3dLookDir = { 0.0f, 15.0f, 1.0f };    // vf3d look direction
 	olc::vf3d vf3dForward = { 0.0f, 0.0f, 0.0f };    // vf3d Forward direction
-	olc::vf3d vf3dOffset = { 0.0f, 0.0f, -80.0f };    // vf3d Offset
+	olc::vf3d vf3dOffset = { 0.0f, 1.0f, -80.0f };    // vf3d Offset
 
 	// Camera angles
 	float fYaw = 0.0f;		    // FPS Camera rotation in X plane
@@ -148,17 +148,18 @@ public:
 	olc::vf3d vf3dSBackGroundLocation = { 0.0f, 0.0f, 0.0f };	// vf3d BackGround Location 
 	olc::vf3d vf3dBackGroundOffset = { 0.0f, 0.0f, 0.0f };		// vf3d BackGround Offset
 
-	olc::vf3d vf3dGravityGridScale = { 10.0f, 10.0f, 10.0f };		// vf3d Gravity Grid Scale (in sort its Size)
+	olc::vf3d vf3dGravityGridScale = { -10.0f, 1.0f, -10.0f };		// vf3d Gravity Grid Scale (in sort its Size)
 	olc::vf3d vf3dGravityGridLocation = { 0.0f, -2.5f, 0.0f };	// vf3d Gravity Grid Location
 	olc::vf3d vf3dGravityGridOffset = { 0.0f, 0.0f, 0.0f };		// vf3d Gravity Grid Offset
 
+	olc::vd2d vd2dGravityGridSetting = { 25.0f, 50 };		// vf3d Gravity Grid Setting (Spacing, Count)
 
 	// Sphere default properties
 	float fSphereRoC = 0.5f;				// Sphere Rate of Change
 	float fSphereRotaotionY = -1.57079633;	// Sphere start Y rotation position
 
 	// Event Horizon default properties
-	float fEventHorizonRoC = 0.5f;			// Event Horizon Rate of Change
+	float fEventHorizonRoC = 0.125f;			// Event Horizon Rate of Change
 	float fEventHorizonRotaotionZ = 0.0f;	// Event Horizon start Z rotation position
 
 public:
@@ -195,7 +196,7 @@ public:
 	/* END Screen Messages */
 
 	olc::vi2d centreScreenPos;
-	bool Gravity = false;
+	bool Gravity = true;
 	float fEventHorizonXAxis = 0; // start Y rotation position
 	float fEventHorizonYAxis = Deg90ToRad; // start Y rotation position
 
@@ -518,6 +519,10 @@ public:
 
 		// Updayte the Axis X/Y scale based on the max X/Y values found
 		UpdateAxisXYScale();
+
+		// Update the gravity grid
+		//UpdateGravityGridWarping(SagittariusA, vd2dGravityGridSetting);
+
 	}
 
 	// Update the Event Horizon Axis X/Y scale
@@ -525,9 +530,71 @@ public:
 	{
 		vf3dEventHorizonXAxisScale.x += vf3dAxisXMaxX.x;
 		vf3dEventHorizonYAxisScale.y += vf3dAxisYMaxY.y;
+		vf3dGravityGridScale.y += vf3dAxisYMaxY.y;
 
 	}
 
+	void UpdateGravityGridWarping(PGEBlackHole spaceObject, olc::vf2d GridSettings)
+	{
+		// We need to work out where on our gird is the object
+		// we know our gravity grid in infinate in all directions as gravity has no start or end
+		// therefore the center of our grid is always at the center of our world therefore:
+
+		// Find the center XY of a grid of X * Y
+		olc::vf2d vf2dGridMax = { GridSettings.x, GridSettings.x };
+		olc::vf2d gridCenterPos = { GridSettings.x / 2.0f, GridSettings.x / 2.0f };
+		olc::vf3d object3DCenterPos = ConvertWorldViewPosToViewPortPos(spaceObject.vPosition);
+		olc::vf2d objectCenterPos = { object3DCenterPos.x, object3DCenterPos.y};
+
+		//1 check if the object is on the grid
+		int32_t gridHalfX = int32_t(GridSettings.x / 2);
+		int32_t radius = int32_t(vf3dAxisXMaxX.y / 2);
+
+		olc::vi2d object3DGridStartPos = { int32_t(objectCenterPos.x + ((object3DCenterPos.x - radius) + gridCenterPos.x)), int32_t(objectCenterPos.y + ((object3DCenterPos.y - radius) + gridCenterPos.y)) };
+		olc::vi2d object3DGridEndPos = { int32_t(objectCenterPos.x + ((object3DCenterPos.x + radius) + gridCenterPos.x)), int32_t((objectCenterPos.x + (object3DCenterPos.y + radius)+gridCenterPos.x)) };
+
+
+		// We know the Schwarzschild radius, but need it is viewPort space
+		// we use a vf3d to the convertion and then use the X result as the r_s worldview to screen view
+		olc::vf3d vf3dRS = ConvertWorldViewPosToViewPortPos({ spaceObject.r_s, 0, 0 });
+
+
+		// Now we get finally we use the famous p = (y * width) + x to find all the points 
+		int32_t startp = (object3DGridStartPos.y * (int32_t)vf3dAxisXMaxX.y + object3DGridStartPos.x);
+		int32_t endp = (object3DGridEndPos.y * (int32_t)vf3dAxisXMaxX.y + object3DGridEndPos.x);
+		int32_t centerp = ((endp - startp) / 2) + startp;  // isn't math fun :)
+
+		float fYAddAmount = (vf3dRS.x / GridSettings.y) * 5.0f;
+		float fYNextAMount = 0;
+		size_t nMaxSize = meshGravityGrid.pos.size();
+		for (size_t i = startp; i < endp; i++)
+		{
+			if (i >= nMaxSize) break;
+			auto& posy = meshGravityGrid.pos[i][1];
+			// We are only moving the Y axis up and down to create the warping effect
+			if (i <= centerp)
+			{
+				fYNextAMount += fYAddAmount;
+				posy -= fYNextAMount;
+
+			}
+			else
+			{
+				fYNextAMount -= fYAddAmount;
+				posy += fYNextAMount;
+			}
+
+
+		}
+
+
+	
+
+	
+
+
+
+	}
 	// Draws all final ray points in 3D space
 	void DrawFinalRayPoints()
 	{
@@ -834,7 +901,7 @@ public:
 		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon Y Axis
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
-		meshGravityGrid = olc::utils::hw3d::CreateGrid(25.0f, 50);					// Default Grid
+		meshGravityGrid = olc::utils::hw3d::CreateGrid(vd2dGravityGridSetting.x, vd2dGravityGridSetting.y,olc::GREY);					// Default Grid
 		
 
 
@@ -1259,15 +1326,6 @@ public:
 		if (sHideShowMenu.bShowStars)
 			HW3D_DrawObject((mf4dWorld * mf4dBackGround).m, renBackGround.Decal(), meshBackGround.layout, meshBackGround.pos, meshBackGround.uv, meshBackGround.col);
 
-
-		// Draw the black hole
-		if (sHideShowMenu.bShowBlackHole)
-			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, nullptr, meshBlackHole.layout, meshBlackHole.pos, meshBlackHole.uv, meshBlackHole.col);
-
-		// Draw the Event Horizon
-		if (sHideShowMenu.bShowEventHorizon)
-			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizon.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
-
 		// Draw the Event Horizon Y Axis
 		if (sHideShowMenu.bShowEventHorizonYAxis)
 			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonYAxis).m, renEventHorizonY.Decal(), meshEventHorizonY.layout, meshEventHorizonY.pos, meshEventHorizonY.uv, meshEventHorizonY.col);
@@ -1279,6 +1337,14 @@ public:
 		// Draw the Gravity Grid
 		if (sHideShowMenu.bShowGravityGrid)
 			HW3D_DrawObject((mf4dWorld * mf4dGravityGrid).m, nullptr, meshGravityGrid.layout, meshGravityGrid.pos, meshGravityGrid.uv, meshGravityGrid.col);
+
+		// Draw the black hole
+		if (sHideShowMenu.bShowBlackHole)
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, nullptr, meshBlackHole.layout, meshBlackHole.pos, meshBlackHole.uv, meshBlackHole.col);
+
+		// Draw the Event Horizon
+		if (sHideShowMenu.bShowEventHorizon)
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizon.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
 
 
 		// Some debugging lines and boxes
@@ -1459,10 +1525,10 @@ public:
 	void UpdateEventHorizonRotationZ(float fElapsedTime)
 	{
 		// Update Event Horizon rotation
-		fEventHorizonXAxis += (fSphereRoC * fElapsedTime);
+		fEventHorizonXAxis += (fEventHorizonRoC * fElapsedTime);
 		if (fEventHorizonXAxis > 6.28318531) fEventHorizonXAxis = 0;
 
-		fEventHorizonYAxis += (fSphereRoC * fElapsedTime);
+		fEventHorizonYAxis += (fEventHorizonRoC * fElapsedTime);
 		if (fEventHorizonYAxis > 6.28318531) fEventHorizonYAxis = 0;
 	}
 

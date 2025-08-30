@@ -2032,11 +2032,15 @@ namespace olc::utils::hw3d
 		{
 			float pos = -halfSize + i * step;
 			// Lines along X axis
-			meshPushBack({ -halfSize, 0.0f, pos }, { 0, 1, 0 }, { 0, 0 }, pixelCol);
-			meshPushBack({ halfSize, 0.0f, pos }, { 0, 1, 0 }, { 1, 0 }, pixelCol);
+			meshPushBack({ -halfSize, 1.01f, pos }, { 0, 1, 0 }, { 0, 0 }, pixelCol);
+			meshPushBack({ halfSize, 1.01f, pos }, { 0, 1, 0 }, { 1, 0 }, pixelCol);
+			meshPushBack({ pos, 1.01f, -halfSize }, { 0, 1, 0 }, { 0, 1 }, pixelCol);
 			// Lines along Z axis
-			meshPushBack({ pos, 0.0f, -halfSize }, { 0, 1, 0 }, { 0, 1 }, pixelCol);
-			meshPushBack({ pos, 0.0f, halfSize }, { 0, 1, 0 }, { 1, 1 }, pixelCol);
+			meshPushBack({ pos, 1.01f, halfSize }, { 0, 1, 0 }, { 1, 1 }, pixelCol);
+			meshPushBack({ halfSize, 1.01f, pos }, { 0, 1, 0 }, { 1, 0 }, pixelCol);
+			meshPushBack({ pos, 1.01f, -halfSize }, { 0, 1, 0 }, { 0, 1 }, pixelCol);
+			
+			
 		}
 		m.layout = olc::DecalStructure::LINE;
 		
