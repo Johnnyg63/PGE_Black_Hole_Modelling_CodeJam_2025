@@ -41,6 +41,14 @@ olc::vd3d vd2dConstLightDirZ = { 0.0, 0.0, C };// Const Initial direction of the
 const double dKMtoMeters = 1e+3;		// Conversion factor from kilometers to meters
 const double dMetersToKM = 1e-3;		// Conversion factor from meters to kilometers
 const double dScreenMToWorldVM = 1e+11;	// Conversion factor from Screen meters to WorldView Meters(1e11 meters)
+
+const float DegToRad = float(M_PI / 180.0); // Degrees to Radians conversion
+const float RadToDeg = float(180.0 / M_PI); // Radians to Degrees conversion
+const float Deg90ToRad = float(M_PI / 2.0); // 90 Degrees to Radians conversion
+const float Deg180ToRad = float(M_PI);      // 180 Degrees to Radians conversion
+const float Deg270ToRad = float(3.0 * M_PI / 2.0); // 270 Degrees to Radians conversion
+const float Deg360ToRad = float(2.0 * M_PI); // 360 Degrees to Radians conversion
+const float RadAngleOfAttack = float(15.0 * M_PI / 180.0); // 5 degree angle of attack for light rays
 double WorldX = 0;					// Width of the viewport in meters  
 double WorldY = 0;					// Height of the viewport in meters
 double WorldZ = 0;					// Deph of the viewport in meters
@@ -77,7 +85,8 @@ public:
 	olc::mf4d mf4dSphere;		// Matrix for Sphere (Sun, Stars etc)
 	olc::mf4d mf4dBackGround;	// Matrix for Background Space Grid
 	olc::mf4d mf4dEventHorizon; // Matrix for Event Horizon
-	olc::mf4d mf4dEventHorizonY; // Matrix for Event Horizon Y Axis rotation
+	olc::mf4d mf4dEventHorizonXAxis; // Matrix for Event Horizon X Axis rotation
+	olc::mf4d mf4dEventHorizonYAxis; // Matrix for Event Horizon Y Axis rotation
 	olc::mf4d mf4dGravityGrid;	// Matrix for Gravity Grid
 	olc::mf4d mf4dProject;		// Projection Matrix
 
@@ -95,10 +104,10 @@ public:
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
-	olc::vf3d vf3dCamera = { 0.0f, 0.0f, -20.0f };    // vf3d camera direction
-	olc::vf3d vf3dLookDir = { 0.0f, 0.0f, 1.0f };    // vf3d look direction
+	olc::vf3d vf3dCamera = { 0.0f, 15.0f, -80.0f };    // vf3d camera direction
+	olc::vf3d vf3dLookDir = { 0.0f, 15.0f, 1.0f };    // vf3d look direction
 	olc::vf3d vf3dForward = { 0.0f, 0.0f, 0.0f };    // vf3d Forward direction
-	olc::vf3d vf3dOffset = { 0.0f, 0.0f, -20.0f };    // vf3d Offset
+	olc::vf3d vf3dOffset = { 0.0f, 0.0f, -80.0f };    // vf3d Offset
 
 	// Camera angles
 	float fYaw = 0.0f;		    // FPS Camera rotation in X plane
@@ -123,9 +132,17 @@ public:
 	olc::vf3d vf3dBlackHoleLocation = { 0.0f, 0.0f, 0.0f };		// vf3d Black hole Location 
 	olc::vf3d vf3dBlackHoleOffset = { 0.0f, 0.0f, 0.0f };		// vf3d black hole Offset
 
-	olc::vd3d vf3dEventHorizonScale = { 10.0f, 10.0f, 10.0f };		// vf3d Event Horizon Scale (in sort its Size)
+	olc::vd3d vf3dEventHorizonScale = { 10.0f, 10.0f, 1.0f };	// vf3d Event Horizon Scale (in sort its Size)
 	olc::vd3d vf3dEventHorizonLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
 	olc::vd3d vf3dEventHorizonOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
+
+	olc::vd3d vf3dEventHorizonXAxisScale = { 11.0f, 11.0f, 1.0f };	// vf3d Event Horizon Scale (in sort its Size)
+	olc::vd3d vf3dEventHorizonXAxisLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
+	olc::vd3d vf3dEventHorizonXAxisOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
+
+	olc::vd3d vf3dEventHorizonYAxisScale = { 11.0f, 11.0f, 1.0f };	// vf3d Event Horizon Scale (in sort its Size)
+	olc::vd3d vf3dEventHorizonYAxisLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
+	olc::vd3d vf3dEventHorizonYAxisOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
 
 	olc::vf3d vf3dBackGroundScale = { 600.0f, 600.0f, 600.0f }; // vf3d BackGround Scale (in sort its Size)
 	olc::vf3d vf3dSBackGroundLocation = { 0.0f, 0.0f, 0.0f };	// vf3d BackGround Location 
@@ -179,6 +196,10 @@ public:
 
 	olc::vi2d centreScreenPos;
 	bool Gravity = false;
+	float fEventHorizonXAxis = Deg90ToRad; // start Y rotation position
+	float fEventHorizonYAxis = -Deg90ToRad; // start Y rotation position
+
+
 
 public:
 
@@ -783,8 +804,8 @@ public:
 		// Create required matrices
 		meshSphere = olc::utils::hw3d::CreateSphere();								// Default sphere
 		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);		// Default Event Horizon
-		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);	// Default Event Horizon X Axis
-		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);	// Default Event Horizon Y Axis
+		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.5f));	// Default Event Horizon X Axis
+		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.5f));	// Default Event Horizon Y Axis
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
 		meshGravityGrid = olc::utils::hw3d::CreateGrid(25.0f, 50);					// Default Grid
@@ -1128,21 +1149,47 @@ public:
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
 		olc::mf4d mSphereTrans, mSphereScale, mSphereRotationX, mSphereRotationY, mSphereRotationZ;
 		olc::mf4d mEventHozTrans, mEventHozScale, mEventHozRotationX, mEventHozRotationY, mEventHozRotationZ;
+		olc::mf4d mEventHozTransY, mEventHozScaleY, mEventHozRotationXY, mEventHozRotationYY, mEventHozRotationZY;
+		olc::mf4d mEventHozTransX, mEventHozScaleX, mEventHozRotationXX, mEventHozRotationYX, mEventHozRotationZX;
 		olc::mf4d mBackGroundTrans, mBackGroundScale, mBackGroundRotationX, mBackGroundRotationY, mBackGroundRotationZ;
 		olc::mf4d mGravityGridTrans, mGravityGridScale, mGravityGridRotationX, mGravityGridRotationY, mGravityGridRotationZ;
 
 
 		// Setup Event Horizon
 		mEventHozTrans.translate(vf3dEventHorizonLocation);
-		mEventHozScale.scale(vf3dEventHorizonScale);
 		mEventHozRotationY.rotateY(fTheta);
-		mEventHozRotationX.rotateX(fYaw);
+		mEventHozRotationX.rotateX(fYaw + RadAngleOfAttack);
 
-		mf4dEventHorizon = mEventHozTrans * mEventHozScale * mEventHozRotationY; // Rotate the Sphere into the correct North/South pole position
+		mf4dEventHorizon = mEventHozTrans * mEventHozRotationY; // Rotate the Sphere into the correct North/South pole position
 		mf4dEventHorizon = mf4dEventHorizon * mEventHozRotationX;
 		mEventHozRotationZ.rotateZ(fTheta);
 		mf4dEventHorizon = mf4dEventHorizon * mEventHozRotationZ;
+		mEventHozScale.scale(vf3dEventHorizonScale);
+		mf4dEventHorizon = mf4dEventHorizon * mEventHozScale;
 
+		// Setup Event Horizon Y Axis
+		mEventHozTransY.translate(vf3dEventHorizonYAxisLocation);
+		mEventHozRotationYY.rotateY(fTheta);
+		mEventHozRotationXY.rotateX(fYaw + RadAngleOfAttack);
+
+		mf4dEventHorizonYAxis = mEventHozTransY * mEventHozRotationYY; // Rotate the Sphere into the correct North/South pole position
+		mf4dEventHorizonYAxis = mf4dEventHorizonYAxis * mEventHozRotationXY;
+		mEventHozRotationZY.rotateZ(fEventHorizonYAxis);
+		mf4dEventHorizonYAxis = mf4dEventHorizonYAxis * mEventHozRotationZY;
+		mEventHozScaleY.scale(vf3dEventHorizonYAxisScale);
+		mf4dEventHorizonYAxis = mf4dEventHorizonYAxis * mEventHozScaleY;
+
+		// Setup Event Horizon X Axis
+		mEventHozTransX.translate(vf3dEventHorizonXAxisLocation);
+		mEventHozRotationYX.rotateY(fTheta);
+		mEventHozRotationXX.rotateX(fYaw + (Deg90ToRad + RadAngleOfAttack));
+
+		mf4dEventHorizonXAxis = mEventHozTransX * mEventHozRotationYX; // Rotate the Sphere into the correct North/South pole position
+		mf4dEventHorizonXAxis = mf4dEventHorizonXAxis * mEventHozRotationXX;
+		mEventHozRotationZX.rotateZ(fEventHorizonXAxis);
+		mf4dEventHorizonXAxis = mf4dEventHorizonXAxis * mEventHozRotationZX;
+		mEventHozScaleX.scale(vf3dEventHorizonXAxisScale);
+		mf4dEventHorizonXAxis = mf4dEventHorizonXAxis * mEventHozScaleX;
 
 
 		// Setup Grid
@@ -1197,8 +1244,11 @@ public:
 
 		// Draw the Event Horizon Y Axis
 		if (sHideShowMenu.bShowEventHorizonYAxis)
-			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizonY.Decal(), meshEventHorizonY.layout, meshEventHorizonY.pos, meshEventHorizonY.uv, meshEventHorizonY.col);
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonYAxis).m, renEventHorizonY.Decal(), meshEventHorizonY.layout, meshEventHorizonY.pos, meshEventHorizonY.uv, meshEventHorizonY.col);
 
+		// Draw the Event Horizon X Axis
+		if(sHideShowMenu.bShowEventHorizonXAxis)
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonXAxis).m, renEventHorizonX.Decal(), meshEventHorizonX.layout, meshEventHorizonX.pos, meshEventHorizonX.uv, meshEventHorizonX.col);
 
 		// Draw the Gravity Grid
 		if (sHideShowMenu.bShowGravityGrid)
@@ -1262,6 +1312,9 @@ public:
 			}
 
 		}
+
+		// Update Event Horizon Axis X/Y Z rotation
+		UpdateEventHorizonRotationZ(fElapsedTime);
 
 		// load menu messages
 		LoadDefaultMessagesFor3DWorld();
@@ -1357,6 +1410,16 @@ public:
 		AddMessage(sMenuMessageBreak);
 	}
 
+	// Update the Event Horizon Axis X/Y rotation z
+	void UpdateEventHorizonRotationZ(float fElapsedTime)
+	{
+		// Update Event Horizon rotation
+		fEventHorizonXAxis += (fSphereRoC * fElapsedTime);
+		if (fEventHorizonXAxis > 6.28318531) fEventHorizonXAxis = 0;
+
+		fEventHorizonYAxis += (fSphereRoC * fElapsedTime);
+		if (fEventHorizonYAxis > 6.28318531) fEventHorizonYAxis = 0;
+	}
 
 	// Display Ray Numbers for 3D world
 	void DisplayRayNumbersFor3DWorld()
