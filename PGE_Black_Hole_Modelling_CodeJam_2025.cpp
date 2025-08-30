@@ -48,7 +48,7 @@ const float Deg90ToRad = float(M_PI / 2.0); // 90 Degrees to Radians conversion
 const float Deg180ToRad = float(M_PI);      // 180 Degrees to Radians conversion
 const float Deg270ToRad = float(3.0 * M_PI / 2.0); // 270 Degrees to Radians conversion
 const float Deg360ToRad = float(2.0 * M_PI); // 360 Degrees to Radians conversion
-const float RadAngleOfAttack = float(15.0 * M_PI / 180.0); // 5 degree angle of attack for light rays
+const float RadAngleOfAttack = float(-15.0 * M_PI / 180.0); // -15 degree angle of attack for light rays
 double WorldX = 0;					// Width of the viewport in meters  
 double WorldY = 0;					// Height of the viewport in meters
 double WorldZ = 0;					// Deph of the viewport in meters
@@ -196,8 +196,11 @@ public:
 
 	olc::vi2d centreScreenPos;
 	bool Gravity = false;
-	float fEventHorizonXAxis = Deg90ToRad; // start Y rotation position
-	float fEventHorizonYAxis = -Deg90ToRad; // start Y rotation position
+	float fEventHorizonXAxis = 0; // start Y rotation position
+	float fEventHorizonYAxis = Deg90ToRad; // start Y rotation position
+
+	olc::vf3d vf3dAxisXMaxX = { 0.0f, 0.0f, 0.0f };
+	olc::vf3d vf3dAxisYMaxY = { 0.0f, 0.0f, 0.0f };
 
 
 
@@ -480,6 +483,9 @@ public:
 	// Removes tail rays that are outside of the X/Y bounds to optimize rendering
 	void OptimizeTrailRaysForXYAxis(std::vector<Ray3D>& rays) {
 
+		vf3dAxisXMaxX = { 0.0f, 0.0f, 0.0f };
+		vf3dAxisYMaxY = { 0.0f, 0.0f, 0.0f };
+		
 		finalXYRayPoints.clear();
 		std::unordered_set<olc::vf3d> raysToRemove;
 		for (auto& ray : rays) {
@@ -493,13 +499,33 @@ public:
 				auto result = raysToRemove.insert(p);
 				if(result.second) {
 					
-					if (std::abs(p.x) < 1.0) finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
-					if (std::abs(p.y) < 1.0) finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
+					if (std::abs(p.x) < 1.0) {
+						finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
+
+						if(vf3dAxisXMaxX.x < std::abs(p.x))
+							vf3dAxisXMaxX = { p.x, p.y, p.z };
+					}
+
+					if (std::abs(p.y) < 1.0) {
+						finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
+						if (vf3dAxisYMaxY.y < std::abs(p.y))
+							vf3dAxisYMaxY = { p.x, p.y, p.z };
+					}
 				}
-				
 
 			}
 		}
+
+		// Updayte the Axis X/Y scale based on the max X/Y values found
+		UpdateAxisXYScale();
+	}
+
+	// Update the Event Horizon Axis X/Y scale
+	void UpdateAxisXYScale()
+	{
+		vf3dEventHorizonXAxisScale.x += vf3dAxisXMaxX.x;
+		vf3dEventHorizonYAxisScale.y += vf3dAxisYMaxY.y;
+
 	}
 
 	// Draws all final ray points in 3D space
@@ -803,9 +829,9 @@ public:
 
 		// Create required matrices
 		meshSphere = olc::utils::hw3d::CreateSphere();								// Default sphere
-		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);		// Default Event Horizon
-		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.5f));	// Default Event Horizon X Axis
-		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.5f));	// Default Event Horizon Y Axis
+		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.1f, 0.1f, 64, 32);		// Default Event Horizon
+		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon X Axis
+		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon Y Axis
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
 		meshGravityGrid = olc::utils::hw3d::CreateGrid(25.0f, 50);					// Default Grid
@@ -1316,6 +1342,7 @@ public:
 		// Update Event Horizon Axis X/Y Z rotation
 		UpdateEventHorizonRotationZ(fElapsedTime);
 
+
 		// load menu messages
 		LoadDefaultMessagesFor3DWorld();
 
@@ -1408,7 +1435,25 @@ public:
 			sHideShowMenu.bShowXYLightGrid = !sHideShowMenu.bShowXYLightGrid;
 		}
 		AddMessage(sMenuMessageBreak);
+
+		sMenuMessage = "Press 8 to show/hide  Event Horizon X Axis";
+		AddMessage(sMenuMessage);
+		if (GetKey(olc::Key::K8).bPressed)
+		{
+			sHideShowMenu.bShowEventHorizonXAxis = !sHideShowMenu.bShowEventHorizonXAxis;
+		}
+		AddMessage(sMenuMessageBreak);
+
+		sMenuMessage = "Press 9 to show/hide Event Horizon Y Axis";
+		AddMessage(sMenuMessage);
+		if (GetKey(olc::Key::K9).bPressed)
+		{
+			sHideShowMenu.bShowEventHorizonYAxis = !sHideShowMenu.bShowEventHorizonYAxis;
+		}
+		AddMessage(sMenuMessageBreak);
 	}
+
+	
 
 	// Update the Event Horizon Axis X/Y rotation z
 	void UpdateEventHorizonRotationZ(float fElapsedTime)
