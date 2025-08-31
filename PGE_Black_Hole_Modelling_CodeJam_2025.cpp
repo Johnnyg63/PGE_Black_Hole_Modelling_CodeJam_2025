@@ -104,10 +104,10 @@ public:
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
-	olc::vf3d vf3dCamera = { 0.0f, 0.0f, -20.0f };    // vf3d camera direction
+	olc::vf3d vf3dCamera = { 0.0f, 0.0f, -100.0f };    // vf3d camera direction
 	olc::vf3d vf3dLookDir = { 0.0f, 0.0f, 1.0f };    // vf3d look direction
 	olc::vf3d vf3dForward = { 0.0f, 0.0f, 0.0f };    // vf3d Forward direction
-	olc::vf3d vf3dOffset = { 0.0f, 0.0f, -20.0f };    // vf3d Offset
+	olc::vf3d vf3dOffset = { 0.0f, 0.0f, -100.0f };    // vf3d Offset
 
 	// Camera angles
 	float fYaw = 0.0f;		    // FPS Camera rotation in X plane
@@ -115,7 +115,7 @@ public:
 	float fTheta = 0.0f;	    // Spins World transform
 	float fThetaRoC = 1.5f;	    // fTheta Rate of Change Spin Left/Right
 	float fStrifeRoC = 8.5f;    // Strife Rate of Change, thanks: #Boguslavv
-	float fForwardRoC = 8.0f;   // Forward/Backwards Rate of Change
+	float fForwardRoC = 15.0f;   // Forward/Backwards Rate of Change
 	float fJump = vf3dOffset.y;	// Monitors jump height so we can land again
 	float fJumpRoC = 4.0f;		// fTheta Rate of Change
 
@@ -505,7 +505,24 @@ public:
 				if (result.second) {
 
 
+
+
 					if (std::abs(p.x) < 1.0) finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -519,7 +536,33 @@ public:
 
 
 
+
+
+
 				}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -909,7 +952,8 @@ public:
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
 		//meshGravityGrid = olc::utils::hw3d::CreateGrid(vd2dGravityGridSetting.x, vd2dGravityGridSetting.y);					// Default Grid
-		
+
+
 
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
@@ -1431,7 +1475,30 @@ public:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 			}
+
+
+
+
+
+
+
+
+
 
 
 		}
@@ -1460,6 +1527,8 @@ public:
 
 
 
+
+
 	}
 
 	// Reloads all the rays in the 3D world
@@ -1479,84 +1548,84 @@ public:
 		loadRaysStatus.bRaysLoaded = true;
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	void LoadDefaultMessagesFor2DWorld()
+	{
+		AddMessage(sMenuMessageBreak);
+		std::string sMenuMessage = "Press S to show/hide 3D World";
+		AddMessage(sMenuMessage);
+		AddMessage(sMenuMessageBreak);
+		;
+		sMenuMessage = "Press R to reset ray";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "Press SPACE to pause/resume ray movement";
+		AddMessage(sMenuMessage);
+		AddMessage(sMenuMessageBreak);
+		AddMessage(sMenuEmptyLine);
+
+		sMenuMessage = "This model uses the Schwarzschild Metric to calculate the path of light rays around a Black Hole";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The equations are solved using the 4th order Runge-Kutta method";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The Black Hole is modelled on Sagittarius A*, the supermassive black hole at the center of our Milky Way galaxy";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The mass of Sagittarius A* is approximately 4.154 million solar masses";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The Schwarzschild radius is about 12 million kilometers (or about 7.5 million miles)";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The rays are optimised to remove duplicate points, this is most noticable when the rays are far from the black hole";
+		AddMessage(sMenuMessage);
+		AddMessage(sMenuEmptyLine);
+		sMenuMessage = "All calcualations are executed using their real world values, i.e. 1 solar mass = " + std::to_string(dSolarMass) + "Kg!!!";
+		AddMessage(sMenuMessage);
+		AddMessage(sMenuEmptyLine);
+
+		sMenuMessage = "Actual values used in the model:";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "   Sagittarius A* : " + std::to_string(dSagittariusAMass) + "Kg, ";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "   Our Sun: " + std::to_string(dSunMass) + "Kg, ";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "   Speed of Light (C): " + std::to_string(C) + "m/s, ";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "   SGravitational constant (G): -0.00000000000667430G";
+		AddMessage(sMenuMessage);
+
+		AddMessage(sMenuEmptyLine);
+		sMenuMessage = "Yep the maths are crazy!";
+		AddMessage(sMenuMessage);
+
+		AddMessage(sMenuEmptyLine);
+		sMenuMessage = "This Black hole model, is powered by the PGE 2.0, C++ and some complex maths.";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "Finally, I did this to prove how power PGE 2.0 is!";
+		AddMessage(sMenuMessage);
+
+		AddMessage(sMenuEmptyLine);
+		sMenuMessage = "Github: https://github.com/Johnnyg63/PGE_Black_Hole_Modelling_CodeJam_2025";
+		AddMessage(sMenuMessage);
+
+		sMenuMessage = "PGE 2.0: https://github.com/OneLoneCoder/olcPixelGameEngine";
+		AddMessage(sMenuMessage);
+
+		sMenuMessage = "Come join us on Discord: https://discord.com/invite/WhwHUMV";
+		AddMessage(sMenuMessage);
+
+		sMenuMessage = "One Lone Coder: https://onelonecoder.com/";
+		AddMessage(sMenuMessage);
+
+
+		AddMessage(sMenuMessageBreak);
+		AddMessage(sMenuMessageBreak);
+	}
 
 	// Loads default messages for the 3D world
 	void LoadDefaultMessagesFor3DWorld()
 	{
-
+		AddMessage(sMenuEmptyLine);
 		std::string sMenuMessage = "Press S to show/hide 2D World";
 		AddMessage(sMenuMessage);
 		AddMessage(sMenuMessageBreak);
-
+		AddMessage(sMenuEmptyLine);
 		sMenuMessage = ("Use left mouse (touch) to look around");
 		AddMessage(sMenuMessage);
 		sMenuMessage = ("Use right mouse (touch) or up/down arrows to move forward/backward");
@@ -1574,7 +1643,7 @@ public:
 	// Loads the options menu for the 3D world
 	void LoadOptionsMenuFor3DWorld()
 	{
-
+		AddMessage(sMenuEmptyLine);
 		AddMessage(sMenuMessageBreak);
 		std::string	sMenuMessage = "Press 1 to show/hide Event Horizon";
 		AddMessage(sMenuMessage);
@@ -1616,73 +1685,73 @@ public:
 		}
 		AddMessage(sMenuMessageBreak);
 
+		sMenuMessage = "Press 8 to show/hide Einstein X Axis";
+		if (GetKey(olc::Key::K8).bPressed)
+		{
+			sHideShowMenu.bShowEventHorizonXAxis = !sHideShowMenu.bShowEventHorizonXAxis;
+		}
+		AddMessage(sMenuMessage);
 
+		sMenuMessage = "Press 9 to show/hide Einstein Y Axis";
+		if (GetKey(olc::Key::K9).bPressed)
+		{
+			sHideShowMenu.bShowEventHorizonYAxis = !sHideShowMenu.bShowEventHorizonYAxis;
+		}
+		AddMessage(sMenuMessage);
+		sMenuMessage = "Press i to show/hide Extra info about this black hole";
+		if (GetKey(olc::Key::I).bPressed)
+		{
+			sHideShowMenu.bShowExtraInfo = !sHideShowMenu.bShowExtraInfo;
+		}
+		AddMessage(sMenuMessage);
 
+	}
+
+	void ExtraInfoFor3DWorld()
+	{
+		// TODO add extra info display
+		AddMessage(sMenuEmptyLine);
+		AddMessage(sMenuMessageBreak);
+		std::string	sMenuMessage = "Extra Info";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "When you look at the black hole directly you will see the gravitational lensing effect";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The light from the stars behind the black hole is bent around it, creating a ring of light";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "This is known as the Einstein Ring";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The Event Horizon is the point of no return, once you cross it, you will never be able to escape the black hole's gravity";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The Event Horizon is not a physical surface, it is simply a point in space where the escape velocity is equal to the speed of light";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "No matter what angle you view the black hole from, the Event Horizon will always appear as a perfect circle";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "This is because the Event Horizon is a sphere, and a sphere always appears as a circle when viewed from any angle";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "No matter what angle you view the black hole from, it will always face you!";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "When you look at a black hole, you see the all sides at, front, back, top and buttom, left and right";
+		AddMessage(sMenuMessage);
+
+		sMenuMessage = "Finally, although this model shows two Einstein rings, in real world there is just one bend at 90 Degress due to gravity...";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "... I didn't have time to warp it, therefore I just added a second ring to show what it would look like.";
+		AddMessage(sMenuMessage);
 
 
 	}
 
 
+	// Update the Event Horizon Axis X/Y rotation z
+	void UpdateEventHorizonRotationZ(float fElapsedTime)
+	{
+		// Update Event Horizon rotation
+		fEventHorizonXAxis += (fEventHorizonRoC * fElapsedTime);
+		if (fEventHorizonXAxis > 6.28318531) fEventHorizonXAxis = 0;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		fEventHorizonYAxis += (fEventHorizonRoC * fElapsedTime);
+		if (fEventHorizonYAxis > 6.28318531) fEventHorizonYAxis = 0;
+	}
 
 	// Display Ray Numbers for 3D world
 	void DisplayRayNumbersFor3DWorld()
@@ -1695,7 +1764,7 @@ public:
 				szRayTotal += ray.viewPortTrail.size();
 
 			}
-
+			AddMessage(sMenuEmptyLine);
 			AddMessage(sMenuMessageBreak);
 			std::string sMenuMessage = "Totol Calculated Ray Count: " + std::to_string(rays3D.size());
 			AddMessage(sMenuMessage);
@@ -1706,7 +1775,7 @@ public:
 			sMenuMessage = "Total Ray Optimization Ratio: " + std::to_string((float)finalXYRayPoints.size() / (float)finalRayPoints.size() * 100.0f) + "%";
 			AddMessage(sMenuMessage);
 			AddMessage(sMenuMessageBreak);
-
+			AddMessage(sMenuEmptyLine);
 		}
 
 
