@@ -52,5 +52,11 @@
     <None Include="ems_pge\pge2wasm.bat">
       <Filter>ems_pge</Filter>
     </None>
+    <None Include="WASM\index.html">
+      <Filter>WASM</Filter>
+    </None>
+    <None Include="WASM\pge.data">
+      <Filter>WASM</Filter>
+    </None>
   </ItemGroup>
 </Project>

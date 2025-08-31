@@ -104,7 +104,7 @@ public:
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
-	olc::vf3d vf3dCamera = { 0.0f, 1.0f, -80.0f };    // vf3d camera direction
+	olc::vf3d vf3dCamera = { 0.0f, 4.0f, -100.0f };    // vf3d camera direction
 	olc::vf3d vf3dLookDir = { 0.0f, 15.0f, 1.0f };    // vf3d look direction
 	olc::vf3d vf3dForward = { 0.0f, 0.0f, 0.0f };    // vf3d Forward direction
 	olc::vf3d vf3dOffset = { 0.0f, 1.0f, -80.0f };    // vf3d Offset
@@ -115,7 +115,7 @@ public:
 	float fTheta = 0.0f;	    // Spins World transform
 	float fThetaRoC = 1.5f;	    // fTheta Rate of Change Spin Left/Right
 	float fStrifeRoC = 8.5f;    // Strife Rate of Change, thanks: #Boguslavv
-	float fForwardRoC = 8.0f;   // Forward/Backwards Rate of Change
+	float fForwardRoC = 15.0f;   // Forward/Backwards Rate of Change
 	float fJump = vf3dOffset.y;	// Monitors jump height so we can land again
 	float fJumpRoC = 4.0f;		// fTheta Rate of Change
 
@@ -132,7 +132,7 @@ public:
 	olc::vf3d vf3dBlackHoleLocation = { 0.0f, 0.0f, 0.0f };		// vf3d Black hole Location 
 	olc::vf3d vf3dBlackHoleOffset = { 0.0f, 0.0f, 0.0f };		// vf3d black hole Offset
 
-	olc::vd3d vf3dEventHorizonScale = { 10.0f, 10.0f, 1.0f };	// vf3d Event Horizon Scale (in sort its Size)
+	olc::vd3d vf3dEventHorizonScale = { 5.0f, 5.0f, 1.0f };	// vf3d Event Horizon Scale (in sort its Size)
 	olc::vd3d vf3dEventHorizonLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
 	olc::vd3d vf3dEventHorizonOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
 
@@ -1329,6 +1329,15 @@ public:
 		if (sHideShowMenu.bShowStars)
 			HW3D_DrawObject((mf4dWorld * mf4dBackGround).m, renBackGround.Decal(), meshBackGround.layout, meshBackGround.pos, meshBackGround.uv, meshBackGround.col);
 
+		// Draw the black hole
+		if (sHideShowMenu.bShowBlackHole)
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, nullptr, meshBlackHole.layout, meshBlackHole.pos, meshBlackHole.uv, meshBlackHole.col);
+
+		// Draw the Event Horizon
+		if (sHideShowMenu.bShowEventHorizon)
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizon.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
+
+
 		// Draw the Event Horizon Y Axis
 		if (sHideShowMenu.bShowEventHorizonYAxis)
 			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonYAxis).m, renEventHorizonY.Decal(), meshEventHorizonY.layout, meshEventHorizonY.pos, meshEventHorizonY.uv, meshEventHorizonY.col);
@@ -1341,14 +1350,7 @@ public:
 		if (sHideShowMenu.bShowGravityGrid)
 			HW3D_DrawObject((mf4dWorld * mf4dGravityGrid).m, nullptr, meshGravityGrid.layout, meshGravityGrid.pos, meshGravityGrid.uv, meshGravityGrid.col);
 
-		// Draw the black hole
-		if (sHideShowMenu.bShowBlackHole)
-			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, nullptr, meshBlackHole.layout, meshBlackHole.pos, meshBlackHole.uv, meshBlackHole.col);
-
-		// Draw the Event Horizon
-		if (sHideShowMenu.bShowEventHorizon)
-			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizon.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
-
+		
 
 		// Some debugging lines and boxes
 		if (sHideShowMenu.bShowDebugObjects)
