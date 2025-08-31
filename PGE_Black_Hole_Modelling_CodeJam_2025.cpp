@@ -162,6 +162,12 @@ public:
 	float fEventHorizonRoC = 0.125f;			// Event Horizon Rate of Change
 	float fEventHorizonRotaotionZ = 0.0f;	// Event Horizon start Z rotation position
 
+	// Another hack for the browser
+	float fBrowserRoC = 1 / 60;
+	float fBrowserReady = 2;
+	int fBrowserCount = 0;
+
+
 public:
 	// Other stuff
 
@@ -330,6 +336,7 @@ public:
 		bool bShowEarth = false;			// Show/Hide Earth
 		bool bShowDebugObjects = true;		// Show/Hide Debug Objects
 		bool bPause2DRay = false;			// Run/Pause the 2d Ray
+		bool bShowExtraInfo = false;		// Shows extra infor
 	} sHideShowMenu;
 
 	// Menu messages break
@@ -1333,25 +1340,6 @@ public:
 			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizon.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
 
 
-		// Ok This is a bit hacky but it works for now as the browser is a bit slow
-		// We will move this to threading later
-		if (loadRaysStatus.bLoadingRays == false) {
-			sMenuMessage = "Creating model... please wait, we all don't have Super Computers";
-			AddMessage(sMenuMessage);
-			loadRaysStatus.bLoadingRays = true;
-			return;
-		}
-
-		if(loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == true)
-		{
-			if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
-			ReloadRays();
-			sMenuMessage = "Model Created";
-			AddMessage(sMenuMessage);
-			loadRaysStatus.bRaysLoaded;
-			return;
-		}
-
 		// Draw the Event Horizon Y Axis
 		if (sHideShowMenu.bShowEventHorizonYAxis)
 			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonYAxis).m, renEventHorizonY.Decal(), meshEventHorizonY.layout, meshEventHorizonY.pos, meshEventHorizonY.uv, meshEventHorizonY.col);
@@ -1410,6 +1398,30 @@ public:
 		// Update Event Horizon Axis X/Y Z rotation
 		UpdateEventHorizonRotationZ(fElapsedTime);
 
+		// Ok This is a bit hacky but it works for now as the browser is a bit slow
+		// We will move this to threading later
+		if (loadRaysStatus.bLoadingRays == false) {
+			sMenuMessage = "Creating model... please wait, we all don't have Super Computers";
+			AddMessage(sMenuMessage);
+			// we need to way 2 seconds for the browser to settle
+			fBrowserRoC += fElapsedTime;
+			if (fBrowserRoC > fBrowserReady)
+			{
+				loadRaysStatus.bLoadingRays = true;
+			}
+
+			return;
+		}
+
+		if (loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == true)
+		{
+			if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
+			ReloadRays();
+			sMenuMessage = "Model Created";
+			AddMessage(sMenuMessage);
+			loadRaysStatus.bRaysLoaded;
+			return;
+		}
 
 		// load menu messages
 		LoadDefaultMessagesFor3DWorld();
@@ -1419,6 +1431,9 @@ public:
 
 		// Display Ray Numbers
 		DisplayRayNumbersFor3DWorld();
+
+		if (sHideShowMenu.bShowExtraInfo)
+			ExtraInfoFor3DWorld();
 
 	}
 
@@ -1591,8 +1606,47 @@ public:
 			sHideShowMenu.bShowEventHorizonYAxis = !sHideShowMenu.bShowEventHorizonYAxis;
 		}
 		AddMessage(sMenuEmptyLine);
+		AddMessage(sMenuMessageBreak);
+		sMenuMessage = "Press i to show/hide Extra info about this black hole";
+		if (GetKey(olc::Key::I).bPressed)
+		{
+			sHideShowMenu.bShowExtraInfo = !sHideShowMenu.bShowExtraInfo;
+		}
 	}
 
+	void ExtraInfoFor3DWorld()
+	{
+		// TODO add extra info display
+		AddMessage(sMenuEmptyLine);
+		AddMessage(sMenuMessageBreak);
+		std::string	sMenuMessage = "Extra Info";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "When you look at the black hole directly you will see the gravitational lensing effect";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The light from the stars behind the black hole is bent around it, creating a ring of light";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "This is known as the Einstein Ring";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The Event Horizon is the point of no return, once you cross it, you will never be able to escape the black hole's gravity";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "The Event Horizon is not a physical surface, it is simply a point in space where the escape velocity is equal to the speed of light";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "No matter what angle you view the black hole from, the Event Horizon will always appear as a perfect circle";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "This is because the Event Horizon is a sphere, and a sphere always appears as a circle when viewed from any angle";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "No matter what angle you view the black hole from, it will always face you!";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "When you look at a black hole, you see the all sides at, front, back, top and buttom, left and right";
+		AddMessage(sMenuMessage);
+
+		sMenuMessage = "Finally, although this model shows two Einstein rings, in real world there is just one bend at 90 Degress due to gravity...";
+		AddMessage(sMenuMessage);
+		sMenuMessage = "... however I could get gravity done in time, so I just added a second ring, to show the effected.";
+		AddMessage(sMenuMessage);
+		
+
+	}
 	
 
 	// Update the Event Horizon Axis X/Y rotation z
