@@ -1485,8 +1485,6 @@ public:
 		AddMessage(sMenuEmptyLine);
 		sMenuMessage = "All calcualations are executed using their real world values, i.e. 1 solar mass = " + std::to_string(dSolarMass) + "Kg!!!";
 		AddMessage(sMenuMessage);
-		sMenuMessage = "All calcualations are executed using their real world values, i.e. 1 solar mass = " + std::to_string(dSolarMass) + "Kg!!!";
-		AddMessage(sMenuMessage);
 		AddMessage(sMenuEmptyLine);
 
 		sMenuMessage = "Actual values used in the model:";

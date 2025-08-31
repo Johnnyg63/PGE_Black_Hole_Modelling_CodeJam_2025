@@ -2190,34 +2190,7 @@ namespace olc::utils::hw3d
 
 
 
-	//	for (int z = 0; z <= gridSize; ++z) {
-	//		for (int x = 0; x <= gridSize; ++x) {
-	//			float xpos = -worldSize / 2.0f + x * cellSize;
-	//			float zpos = -worldSize / 2.0f + z * cellSize;
-	//			mTemp.pos.push_back({ xpos, 0.0f, zpos });
-	//		}
-	//	}
-
-	//	for (int z = 0; z < gridSize; ++z) {
-	//		for (int x = 0; x < gridSize; ++x) {
-	//			int topLeft = z * (gridSize + 1) + x;
-	//			int topRight = topLeft + 1;
-	//			int bottomLeft = topLeft + (gridSize + 1);
-	//			int bottomRight = bottomLeft + 1;
-
-	//			// First triangle
-	//			mTemp.norm.push_back(topLeft);
-	//			mTemp.norm.push_back(bottomLeft);
-	//			mTemp.norm.push_back(topRight);
-
-	//			// Second triangle
-	//			mTemp.norm.push_back(topRight);
-	//			mTemp.norm.push_back(bottomLeft);
-	//			mTemp.norm.push_back(bottomRight);
-	//		}
-	//	}
-	//
-	//}
+	
 	// End John Galvin
 
 	class Camera3D
