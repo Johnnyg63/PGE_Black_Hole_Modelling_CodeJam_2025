@@ -148,8 +148,8 @@ public:
 	olc::vf3d vf3dSBackGroundLocation = { 0.0f, 0.0f, 0.0f };	// vf3d BackGround Location 
 	olc::vf3d vf3dBackGroundOffset = { 0.0f, 0.0f, 0.0f };		// vf3d BackGround Offset
 
-	olc::vf3d vf3dGravityGridScale = { -10.0f, 1.0f, -10.0f };		// vf3d Gravity Grid Scale (in sort its Size)
-	olc::vf3d vf3dGravityGridLocation = { 0.0f, -2.5f, 0.0f };	// vf3d Gravity Grid Location
+	olc::vf3d vf3dGravityGridScale = { 100.0f, 100.0f, 25.0f };		// vf3d Gravity Grid Scale (in sort its Size)
+	olc::vf3d vf3dGravityGridLocation = { 0.0f, -20.5f, 0.0f };	// vf3d Gravity Grid Location
 	olc::vf3d vf3dGravityGridOffset = { 0.0f, 0.0f, 0.0f };		// vf3d Gravity Grid Offset
 
 	olc::vd2d vd2dGravityGridSetting = { 25.0f, 50 };		// vf3d Gravity Grid Setting (Spacing, Count)
@@ -530,10 +530,11 @@ public:
 	{
 		vf3dEventHorizonXAxisScale.x += vf3dAxisXMaxX.x;
 		vf3dEventHorizonYAxisScale.y += vf3dAxisYMaxY.y;
-		vf3dGravityGridScale.y += vf3dAxisYMaxY.y;
+		vf3dGravityGridScale.y -= vf3dAxisYMaxY.y;
 
 	}
 
+	// TODO rework this to use 2D vectors properly
 	void UpdateGravityGridWarping(PGEBlackHole spaceObject, olc::vf2d GridSettings)
 	{
 		// We need to work out where on our gird is the object
@@ -595,6 +596,7 @@ public:
 
 
 	}
+
 	// Draws all final ray points in 3D space
 	void DrawFinalRayPoints()
 	{
@@ -897,11 +899,12 @@ public:
 		// Create required matrices
 		meshSphere = olc::utils::hw3d::CreateSphere();								// Default sphere
 		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.1f, 0.1f, 64, 32);		// Default Event Horizon
-		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon X Axis
-		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon Y Axis
+		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::DecalStructure::LIST, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon X Axis
+		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::DecalStructure::LIST, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon Y Axis
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
-		meshGravityGrid = olc::utils::hw3d::CreateGrid(vd2dGravityGridSetting.x, vd2dGravityGridSetting.y,olc::GREY);					// Default Grid
+		//meshGravityGrid = olc::utils::hw3d::CreateGrid(vd2dGravityGridSetting.x, vd2dGravityGridSetting.y);					// Default Grid
+		meshGravityGrid = olc::utils::hw3d::Create3DTorus(1.0f, 0.9f, 128, 64, olc::DecalStructure::LINE, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));
 		
 
 
@@ -1287,12 +1290,12 @@ public:
 
 		// Setup Grid
 		mGravityGridTrans.translate(vf3dGravityGridLocation);
+		mGravityGridRotationX.rotateX(Deg90ToRad);
+		mf4dGravityGrid = mGravityGridTrans * mGravityGridScale * mGravityGridRotationX;
+		mGravityGridRotationZ.rotateZ(fEventHorizonXAxis);
+		mf4dGravityGrid = mf4dGravityGrid * mGravityGridRotationZ;
 		mGravityGridScale.scale(vf3dGravityGridScale);
-		// As the grid is flat we only need to rotate on the X axis
-		mGravityGridRotationX.rotateX(0.17079633f);
-
-		mf4dGravityGrid = mGravityGridTrans * mGravityGridScale;// *mGravityGridRotationX;
-
+		mf4dGravityGrid = mf4dGravityGrid * mGravityGridScale;
 		// Setup Camera
 		olc::vf3d vf3dTarget = { 0,0,1 };
 
