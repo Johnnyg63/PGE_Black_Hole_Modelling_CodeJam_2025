@@ -504,146 +504,94 @@ public:
 				auto result = raysToRemove.insert(p);
 				if (result.second) {
 
+					if (std::abs(p.x) < 1.0) {
+						finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
 
+						if (vf3dAxisXMaxX.x < std::abs(p.x))
+							vf3dAxisXMaxX = { p.x, p.y, p.z };
+					}
 
-
-					if (std::abs(p.x) < 1.0) finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-					if (std::abs(p.y) < 1.0) finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
-
-
-
-
-
-
-
-
-
-
+					if (std::abs(p.y) < 1.0) {
+						finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
+						if (vf3dAxisYMaxY.y < std::abs(p.y))
+							vf3dAxisYMaxY = { p.x, p.y, p.z };
+					}
 				}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 			}
-
-
-
-
 		}
 
+		// Updayte the Axis X/Y scale based on the max X/Y values found
+		UpdateAxisXYScale();
+
+		// Update the gravity grid
+		//UpdateGravityGridWarping(SagittariusA, vd2dGravityGridSetting);
 
 	}
 
+	// Update the Event Horizon Axis X/Y scale
+	void UpdateAxisXYScale()
+	{
+		vf3dEventHorizonXAxisScale.x += vf3dAxisXMaxX.x;
+		vf3dEventHorizonYAxisScale.y += vf3dAxisYMaxY.y;
+		vf3dGravityGridScale.y -= vf3dAxisYMaxY.y;
+
+	}
+
+	// TODO rework this to use 2D vectors properly
+	void UpdateGravityGridWarping(PGEBlackHole spaceObject, olc::vf2d GridSettings)
+	{
+		// We need to work out where on our gird is the object
+		// we know our gravity grid in infinate in all directions as gravity has no start or end
+		// therefore the center of our grid is always at the center of our world therefore:
+
+		// Find the center XY of a grid of X * Y
+		olc::vf2d vf2dGridMax = { GridSettings.x, GridSettings.x };
+		olc::vf2d gridCenterPos = { GridSettings.x / 2.0f, GridSettings.x / 2.0f };
+		olc::vf3d object3DCenterPos = ConvertWorldViewPosToViewPortPos(spaceObject.vPosition);
+		olc::vf2d objectCenterPos = { object3DCenterPos.x, object3DCenterPos.y };
+
+		//1 check if the object is on the grid
+		int32_t gridHalfX = int32_t(GridSettings.x / 2);
+		int32_t radius = int32_t(vf3dAxisXMaxX.y / 2);
+
+		olc::vi2d object3DGridStartPos = { int32_t(objectCenterPos.x + ((object3DCenterPos.x - radius) + gridCenterPos.x)), int32_t(objectCenterPos.y + ((object3DCenterPos.y - radius) + gridCenterPos.y)) };
+		olc::vi2d object3DGridEndPos = { int32_t(objectCenterPos.x + ((object3DCenterPos.x + radius) + gridCenterPos.x)), int32_t((objectCenterPos.x + (object3DCenterPos.y + radius) + gridCenterPos.x)) };
 
 
+		// We know the Schwarzschild radius, but need it is viewPort space
+		// we use a vf3d to the convertion and then use the X result as the r_s worldview to screen view
+		olc::vf3d vf3dRS = ConvertWorldViewPosToViewPortPos({ spaceObject.r_s, 0, 0 });
 
 
+		// Now we get finally we use the famous p = (y * width) + x to find all the points 
+		int32_t startp = (object3DGridStartPos.y * (int32_t)vf3dAxisXMaxX.y + object3DGridStartPos.x);
+		int32_t endp = (object3DGridEndPos.y * (int32_t)vf3dAxisXMaxX.y + object3DGridEndPos.x);
+		int32_t centerp = ((endp - startp) / 2) + startp;  // isn't math fun :)
 
+		float fYAddAmount = (vf3dRS.x / GridSettings.y) * 5.0f;
+		float fYNextAMount = 0;
+		size_t nMaxSize = meshGravityGrid.pos.size();
+		for (size_t i = startp; i < endp; i++)
+		{
+			if (i >= nMaxSize) break;
+			auto& posy = meshGravityGrid.pos[i][1];
+			// We are only moving the Y axis up and down to create the warping effect
+			if (i <= centerp)
+			{
+				fYNextAMount += fYAddAmount;
+				posy -= fYNextAMount;
 
+			}
+			else
+			{
+				fYNextAMount -= fYAddAmount;
+				posy += fYNextAMount;
+			}
 
+		}
 
+	}
 
 	// Draws all final ray points in 3D space
 	void DrawFinalRayPoints()
@@ -955,6 +903,7 @@ public:
 		//meshGravityGrid = olc::utils::hw3d::CreateGrid(vd2dGravityGridSetting.x, vd2dGravityGridSetting.y);					// Default Grid
 
 
+
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
 		renEventHorizon.Load("assets/images/NASA_2020_4k.jpg");
@@ -1244,7 +1193,7 @@ public:
 	void DisplayMainMenu(float fElapsedTime)
 	{
 		// TODO add a main menu
-
+		// Will use 2D World for the moment
 	}
 
 	// Shows the 2D world with rays
@@ -1459,6 +1408,20 @@ public:
 			{
 				if (loadRaysStatus.bRaysLoaded)
 					DrawFinalRayPoints();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
