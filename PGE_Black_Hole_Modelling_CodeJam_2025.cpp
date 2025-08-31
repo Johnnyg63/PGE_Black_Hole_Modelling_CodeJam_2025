@@ -315,7 +315,7 @@ public:
 
 	// GUI Menu options
 	struct sHideShowMenu {
-		bool bShow2DWorld = false;			// Show/Hide 2D World tottle for 3D
+		bool bShow2DWorld = true;			// Show/Hide 2D World tottle for 3D
 		bool bShowGravityGrid = true;		// Show/Hide Gravity Gride
 		bool bShowBlackHole = true;			// Show/Hide Black Hole Center
 		bool bShowEventHorizon = true;		// Show/Hide Event Horizon
@@ -1240,7 +1240,7 @@ public:
 	// Shows the 3D world 
 	void Display3DWorld(float fElapsedTime)
 	{
-		
+		std::string sMenuMessage = "...";
 		// 3D Render section
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
 		olc::mf4d mSphereTrans, mSphereScale, mSphereRotationX, mSphereRotationY, mSphereRotationZ;
@@ -1338,6 +1338,25 @@ public:
 			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizon.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
 
 
+		// Ok This is a bit hacky but it works for now as the browser is a bit slow
+		// We will move this to threading later
+		if (loadRaysStatus.bLoadingRays == false) {
+			sMenuMessage = "Loading Rays - Please wait...";
+			AddMessage(sMenuMessage);
+			loadRaysStatus.bLoadingRays = true;
+			return;
+		}
+
+		if(loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == true)
+		{
+			if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
+			ReloadRays();
+			sMenuMessage = "Creating model... please wait, we all don't have Super Computers";
+			AddMessage(sMenuMessage);
+			loadRaysStatus.bRaysLoaded;
+			return;
+		}
+
 		// Draw the Event Horizon Y Axis
 		if (sHideShowMenu.bShowEventHorizonYAxis)
 			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonYAxis).m, renEventHorizonY.Decal(), meshEventHorizonY.layout, meshEventHorizonY.pos, meshEventHorizonY.uv, meshEventHorizonY.col);
@@ -1382,31 +1401,14 @@ public:
 
 		if (sHideShowMenu.bShowFullLightGrid)
 		{
-			if (loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == false)
-			{
-				if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
-				ReloadRays();
-			}
-			else
-			{
-				if (loadRaysStatus.bRaysLoaded)
-					DrawRays3Ds_Threaded(rays3D);
-			}
-
+			if (loadRaysStatus.bRaysLoaded)
+				DrawRays3Ds_Threaded(rays3D);
 		}
 
 		if (sHideShowMenu.bShowXYLightGrid)
 		{
-			if (loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == false)
-			{
-				if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
-				ReloadRays();
-			}
-			else
-			{
-				if (loadRaysStatus.bRaysLoaded)
-					DrawFinalRayPoints();
-			}
+			if (loadRaysStatus.bRaysLoaded)
+				DrawFinalRayPoints();
 
 		}
 
