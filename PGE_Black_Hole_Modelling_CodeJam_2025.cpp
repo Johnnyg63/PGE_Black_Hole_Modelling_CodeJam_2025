@@ -41,6 +41,14 @@ olc::vd3d vd2dConstLightDirZ = { 0.0, 0.0, C };// Const Initial direction of the
 const double dKMtoMeters = 1e+3;		// Conversion factor from kilometers to meters
 const double dMetersToKM = 1e-3;		// Conversion factor from meters to kilometers
 const double dScreenMToWorldVM = 1e+11;	// Conversion factor from Screen meters to WorldView Meters(1e11 meters)
+
+const float DegToRad = float(M_PI / 180.0); // Degrees to Radians conversion
+const float RadToDeg = float(180.0 / M_PI); // Radians to Degrees conversion
+const float Deg90ToRad = float(M_PI / 2.0); // 90 Degrees to Radians conversion
+const float Deg180ToRad = float(M_PI);      // 180 Degrees to Radians conversion
+const float Deg270ToRad = float(3.0 * M_PI / 2.0); // 270 Degrees to Radians conversion
+const float Deg360ToRad = float(2.0 * M_PI); // 360 Degrees to Radians conversion
+const float RadAngleOfAttack = float(-5.0 * M_PI / 180.0); // -5 degree angle of attack better view experince																			
 double WorldX = 0;					// Width of the viewport in meters  
 double WorldY = 0;					// Height of the viewport in meters
 double WorldZ = 0;					// Deph of the viewport in meters
@@ -58,7 +66,7 @@ class PGEBlackHoleDemo : public olc::PixelGameEngine
 {
 
 public:
-	//olc::SplashScreen olcSplashScreen; //TODO add a splash screen
+	olc::SplashScreen olcSplashScreen; //TODO add a splash screen
 
 	// In Example's constructor, initialize PBH_SagittariusA after the class definition
 	PGEBlackHoleDemo() {
@@ -77,6 +85,8 @@ public:
 	olc::mf4d mf4dSphere;		// Matrix for Sphere (Sun, Stars etc)
 	olc::mf4d mf4dBackGround;	// Matrix for Background Space Grid
 	olc::mf4d mf4dEventHorizon; // Matrix for Event Horizon
+	olc::mf4d mf4dEventHorizonXAxis; // Matrix for Event Horizon X Axis rotation
+	olc::mf4d mf4dEventHorizonYAxis; // Matrix for Event Horizon Y Axis rotation
 	olc::mf4d mf4dGravityGrid;	// Matrix for Gravity Grid
 	olc::mf4d mf4dProject;		// Projection Matrix
 
@@ -86,6 +96,8 @@ public:
 	olc::utils::hw3d::mesh meshSkyCube;		// Sky Cube Mesh
 	olc::utils::hw3d::mesh meshSphere;		// Sphere Mesh (black hole, Sun, Stars etc)
 	olc::utils::hw3d::mesh meshEventHorizon; // Event Horizon Mesh
+	olc::utils::hw3d::mesh meshEventHorizonX; // Event Horizon  Axis Mesh
+	olc::utils::hw3d::mesh meshEventHorizonY; // Event Horizon Y Axis Mesh
 	olc::utils::hw3d::mesh meshBlackHole;	// Black Hole Mesh
 	olc::utils::hw3d::mesh meshBackGround;	// Background Space Grid mesh
 	olc::utils::hw3d::mesh meshGravityGrid;	// Gravity Grid Mesh
@@ -124,6 +136,14 @@ public:
 	olc::vd3d vf3dEventHorizonLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
 	olc::vd3d vf3dEventHorizonOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
 
+	olc::vd3d vf3dEventHorizonXAxisScale = { 11.0f, 11.0f, 1.0f };	// vf3d Event Horizon Scale (in sort its Size)
+	olc::vd3d vf3dEventHorizonXAxisLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
+	olc::vd3d vf3dEventHorizonXAxisOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
+
+	olc::vd3d vf3dEventHorizonYAxisScale = { 11.0f, 11.0f, 1.0f };	// vf3d Event Horizon Scale (in sort its Size)
+	olc::vd3d vf3dEventHorizonYAxisLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
+	olc::vd3d vf3dEventHorizonYAxisOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
+
 	olc::vf3d vf3dBackGroundScale = { 600.0f, 600.0f, 600.0f }; // vf3d BackGround Scale (in sort its Size)
 	olc::vf3d vf3dSBackGroundLocation = { 0.0f, 0.0f, 0.0f };	// vf3d BackGround Location 
 	olc::vf3d vf3dBackGroundOffset = { 0.0f, 0.0f, 0.0f };		// vf3d BackGround Offset
@@ -132,14 +152,20 @@ public:
 	olc::vf3d vf3dGravityGridLocation = { 0.0f, -2.5f, 0.0f };	// vf3d Gravity Grid Location
 	olc::vf3d vf3dGravityGridOffset = { 0.0f, 0.0f, 0.0f };		// vf3d Gravity Grid Offset
 
+	olc::vd2d vd2dGravityGridSetting = { 25.0f, 50 };		// vf3d Gravity Grid Setting (Spacing, Count)																		 
 
 	// Sphere default properties
 	float fSphereRoC = 0.5f;				// Sphere Rate of Change
 	float fSphereRotaotionY = -1.57079633;	// Sphere start Y rotation position
 
 	// Event Horizon default properties
-	float fEventHorizonRoC = 0.5f;			// Event Horizon Rate of Change
+	float fEventHorizonRoC = 0.125f;			// Event Horizon Rate of Change
 	float fEventHorizonRotaotionZ = 0.0f;	// Event Horizon start Z rotation position
+
+	// Another hack for the browser
+	float fBrowserRoC = 1 / 60;
+	float fBrowserReady = 2;
+	int fBrowserCount = 0;
 
 public:
 	// Other stuff
@@ -158,6 +184,8 @@ public:
 	olc::Renderable renSkyCube;					// Sky Cube Renderable
 	olc::Renderable renBlackHoleDecal;			// Black Hole Decal Renderable
 	olc::Renderable renEventHorizon;			// Event Horizon Renderable
+	olc::Renderable renEventHorizonX;			// Event Horizon X Axis Renderable
+	olc::Renderable renEventHorizonY;			// Event Horizon Y Axis Renderable
 	olc::Renderable renBackGround;				// Background Renderable
 	olc::Renderable renBackGround2D;			// 2D Background Renderable
 	/* End Reneders */
@@ -173,7 +201,12 @@ public:
 	/* END Screen Messages */
 
 	olc::vi2d centreScreenPos;
-	bool Gravity = false;
+	bool Gravity = true;
+	float fEventHorizonXAxis = 0; // start Y rotation position
+	float fEventHorizonYAxis = Deg90ToRad; // start Y rotation position
+
+	olc::vf3d vf3dAxisXMaxX = { 0.0f, 0.0f, 0.0f };
+	olc::vf3d vf3dAxisYMaxY = { 0.0f, 0.0f, 0.0f };
 
 public:
 
@@ -289,6 +322,8 @@ public:
 		bool bShowGravityGrid = true;		// Show/Hide Gravity Gride
 		bool bShowBlackHole = true;			// Show/Hide Black Hole Center
 		bool bShowEventHorizon = true;		// Show/Hide Event Horizon
+		bool bShowEventHorizonXAxis = false;	// Show/Hide Event Horizon X Axis
+		bool bShowEventHorizonYAxis = false;	// Show/Hide Event Horizon Y Axis
 		bool bShowXYLightGrid = false;		// Show/Hide XY Light Grid
 		bool bShowFullLightGrid = false;	// Show/Hide Full Grid
 		bool bShowXDisk = false;			// Show/Hide X Disk
@@ -298,11 +333,12 @@ public:
 		bool bShowEarth = false;			// Show/Hide Earth
 		bool bShowDebugObjects = true;		// Show/Hide Debug Objects
 		bool bPause2DRay = false;			// Run/Pause the 2d Ray
+		bool bShowExtraInfo = false;		// Shows extra infor													
 	} sHideShowMenu;
 
 	// Menu messages break
 	std::string sMenuMessageBreak = "----------------------------------";
-
+	std::string sMenuEmptyLine = "   ";
 
 	olc::Renderable CreateBlackHoleEventHorizon(float radius) {
 		olc::Renderable ren;
@@ -441,8 +477,8 @@ public:
 					}
 
 				}
-					
-					
+
+
 			}
 		}
 
@@ -451,6 +487,9 @@ public:
 
 	// Removes tail rays that are outside of the X/Y bounds to optimize rendering
 	void OptimizeTrailRaysForXYAxis(std::vector<Ray3D>& rays) {
+
+		vf3dAxisXMaxX = { 0.0f, 0.0f, 0.0f };
+		vf3dAxisYMaxY = { 0.0f, 0.0f, 0.0f };
 
 		finalXYRayPoints.clear();
 		std::unordered_set<olc::vf3d> raysToRemove;
@@ -463,16 +502,104 @@ public:
 
 				const auto& p = ray.viewPortTrail[i];
 				auto result = raysToRemove.insert(p);
-				if(result.second) {
-					
+				if (result.second) {
+
+
 					if (std::abs(p.x) < 1.0) finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
+
+
+
+
+
+
 					if (std::abs(p.y) < 1.0) finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
+
+
+
+
+
+
 				}
-				
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 			}
+
+
+
+
 		}
+
+
 	}
+
+
+
+
+
+
+
+
+
 
 	// Draws all final ray points in 3D space
 	void DrawFinalRayPoints()
@@ -491,12 +618,12 @@ public:
 		const int32_t nYellow = olc::YELLOW.n;
 		const int32_t nWhite = olc::WHITE.n;
 
-		for(auto& p : finalRayPoints)
+		for (auto& p : finalRayPoints)
 		{
 			HW3D_DrawLine((mf4dWorld).m, { p.first.x, p.first.y, p.first.z }, { p.first.x + 0.01f, p.first.y, p.first.z }, p.second);
 		}
 
-		
+
 	}
 
 	// Draws a single ray step in 3D space using RK4 integration
@@ -774,17 +901,21 @@ public:
 		}
 
 		// Create required matrices
+		meshGravityGrid = olc::utils::hw3d::Create3DTorusGrid(1.0f, 0.9f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));
 		meshSphere = olc::utils::hw3d::CreateSphere();								// Default sphere
-		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.0f, 0.1f, 64, 32);		// Default Event Horizon
+		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.1f, 0.1f, 64, 32);		// Default Event Horizon
+		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon X Axis
+		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon Y Axis
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
-		//meshGravityGrid = olc::utils::hw3d::CreateGrid(1.0f, 30);					// Default Grid
-		meshGravityGrid = olc::utils::hw3d::CreateGrid(25.0f, 50);
-
+		//meshGravityGrid = olc::utils::hw3d::CreateGrid(vd2dGravityGridSetting.x, vd2dGravityGridSetting.y);					// Default Grid
+		
 
 		// Load any textures here
 		renStar.Load("assets/images/NASA_2020_4k.jpg");
 		renEventHorizon.Load("assets/images/NASA_2020_4k.jpg");
+		renEventHorizonX.Load("assets/images/SaturnMap.jpg");
+		renEventHorizonY.Load("assets/images/SaturnMap.jpg");
 		renSkyCube.Load("assets/images/spacetexture.png");
 		renBlackHoleDecal = CreateBlackHoleEventHorizon(15.0f);
 		renBackGround2D.Load("assets/images/MilkyWay2D.jpg");
@@ -1069,6 +1200,7 @@ public:
 	void DisplayMainMenu(float fElapsedTime)
 	{
 		// TODO add a main menu
+
 	}
 
 	// Shows the 2D world with rays
@@ -1086,7 +1218,7 @@ public:
 		DrawDecal({ 0.0f, 0.0f }, renBackGround2D.Decal());
 		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
 		DrawDecal(vCenterPos - olc::vf2d(renBlackHoleDecal.Sprite()->width / 2.0f, renBlackHoleDecal.Sprite()->height / 2.0f), renBlackHoleDecal.Decal());
-		
+
 
 		if (GetKey(olc::Key::R).bPressed)
 		{
@@ -1103,7 +1235,7 @@ public:
 		{
 			for (auto& ray : rays2D) {
 				RayStep2D(ray, 1.0f, SagittariusA.r_s);
-				
+
 			}
 		}
 		DrawRays2D(rays2D);
@@ -1112,38 +1244,68 @@ public:
 	// Shows the 3D world 
 	void Display3DWorld(float fElapsedTime)
 	{
-		
+
 		// 3D Render section
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
 		olc::mf4d mCubeTrans, mCubeScale;
 		olc::mf4d mf4dSkyCubeTrans, mf4dSkyCubeScale, mf4dSkyCubeRotationX, mf4dSkyCubeRotationY, mf4dSkyCubeRotationZ;
 		olc::mf4d mSphereTrans, mSphereScale, mSphereRotationX, mSphereRotationY, mSphereRotationZ;
 		olc::mf4d mEventHozTrans, mEventHozScale, mEventHozRotationX, mEventHozRotationY, mEventHozRotationZ;
-		olc::mf4d mPosition, mCollision;
-		olc::mf4d mMovement, mOffset;
+		olc::mf4d mEventHozTransY, mEventHozScaleY, mEventHozRotationXY, mEventHozRotationYY, mEventHozRotationZY;
+		olc::mf4d mEventHozTransX, mEventHozScaleX, mEventHozRotationXX, mEventHozRotationYX, mEventHozRotationZX;
 		olc::mf4d mBackGroundTrans, mBackGroundScale, mBackGroundRotationX, mBackGroundRotationY, mBackGroundRotationZ;
 		olc::mf4d mGravityGridTrans, mGravityGridScale, mGravityGridRotationX, mGravityGridRotationY, mGravityGridRotationZ;
 
 
 		// Setup Event Horizon
 		mEventHozTrans.translate(vf3dEventHorizonLocation);
-		mEventHozScale.scale(vf3dEventHorizonScale);
-		mEventHozRotationY.rotateY(fTheta);
-		mEventHozRotationX.rotateX(fYaw);
 
-		mf4dEventHorizon = mEventHozTrans * mEventHozScale * mEventHozRotationY; // Rotate the Sphere into the correct North/South pole position
+		mEventHozRotationY.rotateY(fTheta);
+		mEventHozRotationX.rotateX(fYaw + RadAngleOfAttack);
+
+		mf4dEventHorizon = mEventHozTrans * mEventHozRotationY; // Rotate the Sphere into the correct North/South pole position
 		mf4dEventHorizon = mf4dEventHorizon * mEventHozRotationX;
 		mEventHozRotationZ.rotateZ(fTheta);
 		mf4dEventHorizon = mf4dEventHorizon * mEventHozRotationZ;
+		mEventHozScale.scale(vf3dEventHorizonScale);
+		mf4dEventHorizon = mf4dEventHorizon * mEventHozScale;
+
+		// Setup Event Horizon Y Axis
+		mEventHozTransY.translate(vf3dEventHorizonYAxisLocation);
+		mEventHozRotationYY.rotateY(fTheta);
+		mEventHozRotationXY.rotateX(fYaw + RadAngleOfAttack);
+
+		mf4dEventHorizonYAxis = mEventHozTransY * mEventHozRotationYY; // Rotate the Sphere into the correct North/South pole position
+		mf4dEventHorizonYAxis = mf4dEventHorizonYAxis * mEventHozRotationXY;
+		mEventHozRotationZY.rotateZ(fEventHorizonYAxis);
+		mf4dEventHorizonYAxis = mf4dEventHorizonYAxis * mEventHozRotationZY;
+		mEventHozScaleY.scale(vf3dEventHorizonYAxisScale);
+		mf4dEventHorizonYAxis = mf4dEventHorizonYAxis * mEventHozScaleY;
+
+		// Setup Event Horizon X Axis
+		mEventHozTransX.translate(vf3dEventHorizonXAxisLocation);
+		mEventHozRotationYX.rotateY(fTheta);
+		mEventHozRotationXX.rotateX(fYaw + (Deg90ToRad + RadAngleOfAttack));
+
+		mf4dEventHorizonXAxis = mEventHozTransX * mEventHozRotationYX; // Rotate the Sphere into the correct North/South pole position
+		mf4dEventHorizonXAxis = mf4dEventHorizonXAxis * mEventHozRotationXX;
+		mEventHozRotationZX.rotateZ(fEventHorizonXAxis);
+		mf4dEventHorizonXAxis = mf4dEventHorizonXAxis * mEventHozRotationZX;
+		mEventHozScaleX.scale(vf3dEventHorizonXAxisScale);
+		mf4dEventHorizonXAxis = mf4dEventHorizonXAxis * mEventHozScaleX;
+
 
 		// Setup Grid
 		mGravityGridTrans.translate(vf3dGravityGridLocation);
+		mGravityGridRotationX.rotateX(Deg90ToRad);
+		mf4dGravityGrid = mGravityGridTrans * mGravityGridScale * mGravityGridRotationX;
+		mGravityGridRotationZ.rotateZ(fEventHorizonXAxis);
+		mf4dGravityGrid = mf4dGravityGrid * mGravityGridRotationZ;
 		mGravityGridScale.scale(vf3dGravityGridScale);
-		// As the grid is flat we only need to rotate on the X axis
-		mGravityGridRotationX.rotateX(0.17079633f);
 
-		mf4dGravityGrid = mGravityGridTrans * mGravityGridScale;// *mGravityGridRotationX;
 
+
+		mf4dGravityGrid = mf4dGravityGrid * mGravityGridScale;
 		// Setup Camera
 		olc::vf3d vf3dTarget = { 0,0,1 };
 
@@ -1187,10 +1349,17 @@ public:
 			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renStar.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
 
 
+		// Draw the Event Horizon Y Axis
+		if (sHideShowMenu.bShowEventHorizonYAxis)
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonYAxis).m, renEventHorizonX.Decal(), meshEventHorizonY.layout, meshEventHorizonY.pos, meshEventHorizonY.uv, meshEventHorizonY.col);
+
+		// Draw the Event Horizon X Axis
+		if (sHideShowMenu.bShowEventHorizonXAxis)
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonXAxis).m, renEventHorizonX.Decal(), meshEventHorizonX.layout, meshEventHorizonX.pos, meshEventHorizonX.uv, meshEventHorizonX.col);
+
 		// Draw the Gravity Grid
 		if (sHideShowMenu.bShowGravityGrid)
 			HW3D_DrawObject((mf4dWorld * mf4dGravityGrid).m, nullptr, meshGravityGrid.layout, meshGravityGrid.pos, meshGravityGrid.uv, meshGravityGrid.col);
-
 
 		// Some debugging lines and boxes
 		if (sHideShowMenu.bShowDebugObjects)
@@ -1246,9 +1415,38 @@ public:
 			{
 				if (loadRaysStatus.bRaysLoaded)
 					DrawFinalRayPoints();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 			}
 
+
 		}
+
+
+
+
+
+
+
+
+
+
+
+
 
 		// load menu messages
 		LoadDefaultMessagesFor3DWorld();
@@ -1258,6 +1456,9 @@ public:
 
 		// Display Ray Numbers
 		DisplayRayNumbersFor3DWorld();
+
+
+
 
 	}
 
@@ -1279,12 +1480,83 @@ public:
 	}
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	// Loads default messages for the 3D world
 	void LoadDefaultMessagesFor3DWorld()
 	{
+
 		std::string sMenuMessage = "Press S to show/hide 2D World";
 		AddMessage(sMenuMessage);
 		AddMessage(sMenuMessageBreak);
+
 		sMenuMessage = ("Use left mouse (touch) to look around");
 		AddMessage(sMenuMessage);
 		sMenuMessage = ("Use right mouse (touch) or up/down arrows to move forward/backward");
@@ -1302,6 +1574,7 @@ public:
 	// Loads the options menu for the 3D world
 	void LoadOptionsMenuFor3DWorld()
 	{
+
 		AddMessage(sMenuMessageBreak);
 		std::string	sMenuMessage = "Press 1 to show/hide Event Horizon";
 		AddMessage(sMenuMessage);
@@ -1342,7 +1615,73 @@ public:
 			sHideShowMenu.bShowXYLightGrid = !sHideShowMenu.bShowXYLightGrid;
 		}
 		AddMessage(sMenuMessageBreak);
+
+
+
+
+
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 	// Display Ray Numbers for 3D world
@@ -1351,11 +1690,12 @@ public:
 		size_t szRayTotal = 0.0f;
 		if (loadRaysStatus.bRaysLoaded)
 		{
-			for(auto& ray : rays3D)
+			for (auto& ray : rays3D)
 			{
 				szRayTotal += ray.viewPortTrail.size();
-				
+
 			}
+
 			AddMessage(sMenuMessageBreak);
 			std::string sMenuMessage = "Totol Calculated Ray Count: " + std::to_string(rays3D.size());
 			AddMessage(sMenuMessage);
@@ -1363,12 +1703,13 @@ public:
 			AddMessage(sMenuMessage);
 			sMenuMessage = "Total Optimized X/Y Ray Count: " + std::to_string(finalXYRayPoints.size());
 			AddMessage(sMenuMessage);
-            sMenuMessage = "Total Ray Optimization Ratio: " + std::to_string((float)finalXYRayPoints.size() / (float)finalRayPoints.size() * 100.0f) + "%";
+			sMenuMessage = "Total Ray Optimization Ratio: " + std::to_string((float)finalXYRayPoints.size() / (float)finalRayPoints.size() * 100.0f) + "%";
 			AddMessage(sMenuMessage);
 			AddMessage(sMenuMessageBreak);
+
 		}
-		
-		
+
+
 	}
 
 	void DisplayCredits()

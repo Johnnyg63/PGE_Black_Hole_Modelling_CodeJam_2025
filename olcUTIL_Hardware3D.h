@@ -1921,6 +1921,86 @@ namespace olc::utils::hw3d
 
 	}
 
+	olc::utils::hw3d::mesh Create3DTorusGrid(float fMajorRadius, float fMinorRadius, int32_t nMajorSegments = 64, int32_t nMinorSegments = 32, olc::Pixel pixelCol = olc::WHITE)
+	{
+		olc::utils::hw3d::mesh m;
+		float theta0 = 0.0f;
+		float theta1 = 0.0f;
+		float phi0 = 0.0f;
+		float phi1 = 0.0f;
+		float x, y, z;
+
+		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				m.pos.push_back({ pos.x, pos.y, pos.z });			// COORDINATES
+				m.norm.push_back({ norm.x, norm.y, norm.z, 0 });	// NORMS
+				m.uv.push_back({ uv.x, uv.y });						// TexCoord
+				m.col.push_back(col);								// COLOURS
+			};
+
+		for (int i = 0; i < nMajorSegments; ++i)
+		{
+			theta0 = 2.0f * M_PI * i / nMajorSegments;
+			theta1 = 2.0f * M_PI * (i + 1) / nMajorSegments;
+
+			for (int j = 0; j < nMinorSegments; ++j)
+			{
+				phi0 = 2.0f * M_PI * j / nMinorSegments;
+				phi1 = 2.0f * M_PI * (j + 1) / nMinorSegments;
+
+				// Four points of the quad
+				auto getVertex = [&](float theta, float phi) -> olc::vf3d
+					{
+						x = (fMajorRadius + fMinorRadius * cos(phi)) * cos(theta);
+						y = (fMajorRadius + fMinorRadius * cos(phi)) * sin(theta);
+						z = fMinorRadius * sin(phi);
+						return { x, y, z };
+					};
+
+				olc::vf3d p00 = getVertex(theta0, phi0);
+				olc::vf3d p01 = getVertex(theta0, phi1);
+				olc::vf3d p10 = getVertex(theta1, phi0);
+				olc::vf3d p11 = getVertex(theta1, phi1);
+
+				// Normals (from center of tube to surface)
+				auto getNormal = [&](float theta, float phi) -> olc::vf3d
+					{
+						x = cos(theta) * cos(phi);
+						y = sin(theta) * cos(phi);
+						z = sin(phi);
+						return olc::vf3d(x, y, z).norm();
+					};
+
+				olc::vf3d n00 = getNormal(theta0, phi0);
+				olc::vf3d n01 = getNormal(theta0, phi1);
+				olc::vf3d n10 = getNormal(theta1, phi0);
+				olc::vf3d n11 = getNormal(theta1, phi1);
+
+				// UVs
+				olc::vf2d uv00 = { float(i) / nMajorSegments, float(j) / nMinorSegments };
+				olc::vf2d uv01 = { float(i) / nMajorSegments, float(j + 1) / nMinorSegments };
+				olc::vf2d uv10 = { float(i + 1) / nMajorSegments, float(j) / nMinorSegments };
+				olc::vf2d uv11 = { float(i + 1) / nMajorSegments, float(j + 1) / nMinorSegments };
+
+				// First triangle
+				meshPushBack(p00, n00, uv00, pixelCol);
+				meshPushBack(p10, n10, uv10, pixelCol);
+				meshPushBack(p11, n11, uv11, pixelCol);
+
+				// Second triangle
+				meshPushBack(p00, n00, uv00, pixelCol);
+				meshPushBack(p11, n11, uv11, pixelCol);
+				meshPushBack(p01, n01, uv01, pixelCol);
+			}
+		}
+
+		m.layout = olc::DecalStructure::LINE;
+
+		return m;
+
+
+	}
+
 	/*
 	* Creat a 2D Circle plane mesh for a 3D world
 	*/
