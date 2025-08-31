@@ -104,10 +104,10 @@ public:
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
-	olc::vf3d vf3dCamera = { 0.0f, 0.0f, -100.0f };    // vf3d camera direction
+	olc::vf3d vf3dCamera = { 0.0f, 0.0f, -30.0f };    // vf3d camera direction
 	olc::vf3d vf3dLookDir = { 0.0f, 0.0f, 1.0f };    // vf3d look direction
 	olc::vf3d vf3dForward = { 0.0f, 0.0f, 0.0f };    // vf3d Forward direction
-	olc::vf3d vf3dOffset = { 0.0f, 0.0f, -100.0f };    // vf3d Offset
+	olc::vf3d vf3dOffset = { 0.0f, 0.0f, -50.0f };    // vf3d Offset
 
 	// Camera angles
 	float fYaw = 0.0f;		    // FPS Camera rotation in X plane
@@ -318,14 +318,14 @@ public:
 
 	// GUI Menu options
 	struct sHideShowMenu {
-		bool bShow2DWorld = false;			// Show/Hide 2D World tottle for 3D
+		bool bShow2DWorld = true;			// Show/Hide 2D World tottle for 3D
 		bool bShowGravityGrid = true;		// Show/Hide Gravity Gride
 		bool bShowBlackHole = true;			// Show/Hide Black Hole Center
 		bool bShowEventHorizon = true;		// Show/Hide Event Horizon
 		bool bShowEventHorizonXAxis = false;	// Show/Hide Event Horizon X Axis
 		bool bShowEventHorizonYAxis = false;	// Show/Hide Event Horizon Y Axis
 		bool bShowXYLightGrid = false;		// Show/Hide XY Light Grid
-		bool bShowFullLightGrid = false;	// Show/Hide Full Grid
+		bool bShowFullLightGrid = true;	// Show/Hide Full Grid
 		bool bShowXDisk = false;			// Show/Hide X Disk
 		bool bShowYDisk = false;			// Show/Hide Y Disk
 		bool bShowSun = false;				// Show/Hide Sun
