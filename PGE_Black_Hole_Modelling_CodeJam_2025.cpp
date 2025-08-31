@@ -132,7 +132,7 @@ public:
 	olc::vf3d vf3dBlackHoleLocation = { 0.0f, 0.0f, 0.0f };		// vf3d Black hole Location 
 	olc::vf3d vf3dBlackHoleOffset = { 0.0f, 0.0f, 0.0f };		// vf3d black hole Offset
 
-	olc::vd3d vf3dEventHorizonScale = { 10.0f, 10.0f, 10.0f };		// vf3d Event Horizon Scale (in sort its Size)
+	olc::vd3d vf3dEventHorizonScale = { 5.0f, 5.0f, 1.0f };		// vf3d Event Horizon Scale (in sort its Size)
 	olc::vd3d vf3dEventHorizonLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
 	olc::vd3d vf3dEventHorizonOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
 
@@ -148,8 +148,8 @@ public:
 	olc::vf3d vf3dSBackGroundLocation = { 0.0f, 0.0f, 0.0f };	// vf3d BackGround Location 
 	olc::vf3d vf3dBackGroundOffset = { 0.0f, 0.0f, 0.0f };		// vf3d BackGround Offset
 
-	olc::vf3d vf3dGravityGridScale = { 10.0f, 10.0f, 10.0f };		// vf3d Gravity Grid Scale (in sort its Size)
-	olc::vf3d vf3dGravityGridLocation = { 0.0f, -2.5f, 0.0f };	// vf3d Gravity Grid Location
+	olc::vf3d vf3dGravityGridScale = { 100.0f, 100.0f, 25.0f };		// vf3d Gravity Grid Scale (in sort its Size)
+	olc::vf3d vf3dGravityGridLocation = { 0.0f, -20.5f, 0.0f };	// vf3d Gravity Grid Location
 	olc::vf3d vf3dGravityGridOffset = { 0.0f, 0.0f, 0.0f };		// vf3d Gravity Grid Offset
 
 	olc::vd2d vd2dGravityGridSetting = { 25.0f, 50 };		// vf3d Gravity Grid Setting (Spacing, Count)																		 
@@ -530,6 +530,7 @@ public:
 
 
 					if (std::abs(p.y) < 1.0) finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::RED.n));
+
 
 
 
@@ -952,7 +953,6 @@ public:
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
 		//meshGravityGrid = olc::utils::hw3d::CreateGrid(vd2dGravityGridSetting.x, vd2dGravityGridSetting.y);					// Default Grid
-
 
 
 		// Load any textures here
