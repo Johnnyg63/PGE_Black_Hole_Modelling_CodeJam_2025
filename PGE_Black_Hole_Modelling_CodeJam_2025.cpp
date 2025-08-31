@@ -325,8 +325,8 @@ public:
 		bool bShowGravityGrid = true;		// Show/Hide Gravity Gride
 		bool bShowBlackHole = true;			// Show/Hide Black Hole Center
 		bool bShowEventHorizon = true;		// Show/Hide Event Horizon
-		bool bShowEventHorizonXAxis = true;	// Show/Hide Event Horizon X Axis
-		bool bShowEventHorizonYAxis = true;	// Show/Hide Event Horizon Y Axis
+		bool bShowEventHorizonXAxis = false;	// Show/Hide Event Horizon X Axis
+		bool bShowEventHorizonYAxis = false;	// Show/Hide Event Horizon Y Axis
 		bool bShowXYLightGrid = false;		// Show/Hide XY Light Grid
 		bool bShowFullLightGrid = false;	// Show/Hide Full Grid
 		bool bShowXDisk = false;			// Show/Hide X Disk
@@ -334,7 +334,7 @@ public:
 		bool bShowSun = false;				// Show/Hide Sun
 		bool bShowStars = true;				// Show/Hide Stars
 		bool bShowEarth = false;			// Show/Hide Earth
-		bool bShowDebugObjects = true;		// Show/Hide Debug Objects
+		bool bShowDebugObjects = false;		// Show/Hide Debug Objects
 		bool bPause2DRay = false;			// Run/Pause the 2d Ray
 		bool bShowExtraInfo = false;		// Shows extra infor
 	} sHideShowMenu;
@@ -1420,6 +1420,8 @@ public:
 			sMenuMessage = "Model Created";
 			AddMessage(sMenuMessage);
 			loadRaysStatus.bRaysLoaded;
+			sHideShowMenu.bShowEventHorizonXAxis = true;
+			sHideShowMenu.bShowEventHorizonYAxis = true;
 			return;
 		}
 
@@ -1593,25 +1595,26 @@ public:
 		}
 		AddMessage(sMenuMessageBreak);
 
-		sMenuMessage = "Press 8 to show/hide  Event Horizon X Axis";
+		sMenuMessage = "Press 8 to show/hide Einstein X Axis";
 		if (GetKey(olc::Key::K8).bPressed)
 		{
 			sHideShowMenu.bShowEventHorizonXAxis = !sHideShowMenu.bShowEventHorizonXAxis;
 		}
-		AddMessage(sMenuMessageBreak);
+		AddMessage(sMenuMessage);
 
-		sMenuMessage = "Press 9 to show/hide Event Horizon Y Axis";
+		sMenuMessage = "Press 9 to show/hide Einstein Y Axis";
 		if (GetKey(olc::Key::K9).bPressed)
 		{
 			sHideShowMenu.bShowEventHorizonYAxis = !sHideShowMenu.bShowEventHorizonYAxis;
 		}
-		AddMessage(sMenuEmptyLine);
-		AddMessage(sMenuMessageBreak);
+		AddMessage(sMenuMessage);
 		sMenuMessage = "Press i to show/hide Extra info about this black hole";
 		if (GetKey(olc::Key::I).bPressed)
 		{
 			sHideShowMenu.bShowExtraInfo = !sHideShowMenu.bShowExtraInfo;
 		}
+		AddMessage(sMenuMessage);
+
 	}
 
 	void ExtraInfoFor3DWorld()
@@ -1642,7 +1645,7 @@ public:
 
 		sMenuMessage = "Finally, although this model shows two Einstein rings, in real world there is just one bend at 90 Degress due to gravity...";
 		AddMessage(sMenuMessage);
-		sMenuMessage = "... however I could get gravity done in time, so I just added a second ring, to show the effected.";
+		sMenuMessage = "... I didn't have time to warp it, therefore I just added a second ring to show what it would look like.";
 		AddMessage(sMenuMessage);
 		
 
