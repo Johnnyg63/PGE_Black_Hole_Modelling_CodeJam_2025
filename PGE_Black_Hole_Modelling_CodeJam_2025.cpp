@@ -591,6 +591,7 @@ public:
 
 		}
 
+
 	}
 
 	// Draws all final ray points in 3D space
@@ -1199,14 +1200,7 @@ public:
 	// Shows the 2D world with rays
 	void Display2DWorld(float fElapsedTime)
 	{
-		std::string sMenuMessage = "Press S to show 3D World";
-		AddMessage(sMenuMessage);
-		sMenuMessage = "Press R to reset ray";
-		AddMessage(sMenuMessage);
-		sMenuMessage = "Press Spacebar run/pause the light ray";
-		AddMessage(sMenuMessage);
-		sMenuMessage = "---";
-		AddMessage(sMenuMessage);
+		LoadDefaultMessagesFor2DWorld();
 
 		DrawDecal({ 0.0f, 0.0f }, renBackGround2D.Decal());
 		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
@@ -1237,7 +1231,8 @@ public:
 	// Shows the 3D world 
 	void Display3DWorld(float fElapsedTime)
 	{
-
+		// Temp vars
+		std::string sMenuMessage = "";
 		// 3D Render section
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
 		olc::mf4d mCubeTrans, mCubeScale;
@@ -1396,18 +1391,8 @@ public:
 			}
 
 		}
-
-		if (sHideShowMenu.bShowXYLightGrid)
+		if (sHideShowMenu.bShowFullLightGrid)
 		{
-			if (loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == false)
-			{
-				if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
-				ReloadRays();
-			}
-			else
-			{
-				if (loadRaysStatus.bRaysLoaded)
-					DrawFinalRayPoints();
 
 
 
@@ -1415,68 +1400,49 @@ public:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-			}
-
-
-
-
-
-
-
-
-
-
-
+			if (loadRaysStatus.bRaysLoaded)
+				DrawRays3Ds_Threaded(rays3D);
 		}
 
 
 
+		if (sHideShowMenu.bShowXYLightGrid)
+		{
 
+			if (loadRaysStatus.bRaysLoaded)
+				DrawFinalRayPoints();
 
+		}
 
+		// Update Event Horizon Axis X/Y Z rotation
+		UpdateEventHorizonRotationZ(fElapsedTime);
 
+		// Ok This is a bit hacky but it works for now as the browser is a bit slow
+		// We will move this to threading later
+		if (loadRaysStatus.bLoadingRays == false) {
+			sMenuMessage = "Creating model... please wait, we all don't have Super Computers";
+			AddMessage(sMenuMessage);
+			// we need to way 2 seconds for the browser to settle
+			fBrowserRoC += fElapsedTime;
+			if (fBrowserRoC > fBrowserReady)
+			{
+				loadRaysStatus.bLoadingRays = true;
+			}
 
+			return;
+		}
 
-
-
-
+		if (loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == true)
+		{
+			if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
+			ReloadRays();
+			sMenuMessage = "Model Created";
+			AddMessage(sMenuMessage);
+			loadRaysStatus.bRaysLoaded;
+			sHideShowMenu.bShowEventHorizonXAxis = true;
+			sHideShowMenu.bShowEventHorizonYAxis = true;
+			return;
+		}
 
 		// load menu messages
 		LoadDefaultMessagesFor3DWorld();
@@ -1487,10 +1453,8 @@ public:
 		// Display Ray Numbers
 		DisplayRayNumbersFor3DWorld();
 
-
-
-
-
+		if (sHideShowMenu.bShowExtraInfo)
+			ExtraInfoFor3DWorld();
 
 	}
 
