@@ -48,7 +48,7 @@ const float Deg90ToRad = float(M_PI / 2.0); // 90 Degrees to Radians conversion
 const float Deg180ToRad = float(M_PI);      // 180 Degrees to Radians conversion
 const float Deg270ToRad = float(3.0 * M_PI / 2.0); // 270 Degrees to Radians conversion
 const float Deg360ToRad = float(2.0 * M_PI); // 360 Degrees to Radians conversion
-const float RadAngleOfAttack = float(-5.0 * M_PI / 180.0); // -5 degree angle of attack better view experince
+const float RadAngleOfAttack = float(-5.0 * M_PI / 180.0); // -5 degree angle of attack better view experince																			
 double WorldX = 0;					// Width of the viewport in meters  
 double WorldY = 0;					// Height of the viewport in meters
 double WorldZ = 0;					// Deph of the viewport in meters
@@ -104,10 +104,10 @@ public:
 
 	// Camera vectors
 	olc::vf3d vf3dUp = { 0.0f, 1.0f, 0.0f };         // vf3d up direction
-	olc::vf3d vf3dCamera = { 0.0f, 4.0f, -100.0f };    // vf3d camera direction
-	olc::vf3d vf3dLookDir = { 0.0f, 15.0f, 1.0f };    // vf3d look direction
+	olc::vf3d vf3dCamera = { 0.0f, 0.0f, -30.0f };    // vf3d camera direction
+	olc::vf3d vf3dLookDir = { 0.0f, 0.0f, 1.0f };    // vf3d look direction
 	olc::vf3d vf3dForward = { 0.0f, 0.0f, 0.0f };    // vf3d Forward direction
-	olc::vf3d vf3dOffset = { 0.0f, 1.0f, -80.0f };    // vf3d Offset
+	olc::vf3d vf3dOffset = { 0.0f, 0.0f, -50.0f };    // vf3d Offset
 
 	// Camera angles
 	float fYaw = 0.0f;		    // FPS Camera rotation in X plane
@@ -132,7 +132,7 @@ public:
 	olc::vf3d vf3dBlackHoleLocation = { 0.0f, 0.0f, 0.0f };		// vf3d Black hole Location 
 	olc::vf3d vf3dBlackHoleOffset = { 0.0f, 0.0f, 0.0f };		// vf3d black hole Offset
 
-	olc::vd3d vf3dEventHorizonScale = { 5.0f, 5.0f, 1.0f };	// vf3d Event Horizon Scale (in sort its Size)
+	olc::vd3d vf3dEventHorizonScale = { 5.0f, 5.0f, 1.0f };		// vf3d Event Horizon Scale (in sort its Size)
 	olc::vd3d vf3dEventHorizonLocation = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Location
 	olc::vd3d vf3dEventHorizonOffset = { 0.0f, 0.0f, 0.0f };	// vf3d Event Horizon Offset
 
@@ -152,7 +152,7 @@ public:
 	olc::vf3d vf3dGravityGridLocation = { 0.0f, -20.5f, 0.0f };	// vf3d Gravity Grid Location
 	olc::vf3d vf3dGravityGridOffset = { 0.0f, 0.0f, 0.0f };		// vf3d Gravity Grid Offset
 
-	olc::vd2d vd2dGravityGridSetting = { 25.0f, 50 };		// vf3d Gravity Grid Setting (Spacing, Count)
+	olc::vd2d vd2dGravityGridSetting = { 25.0f, 50 };		// vf3d Gravity Grid Setting (Spacing, Count)																		 
 
 	// Sphere default properties
 	float fSphereRoC = 0.5f;				// Sphere Rate of Change
@@ -166,7 +166,6 @@ public:
 	float fBrowserRoC = 1 / 60;
 	float fBrowserReady = 2;
 	int fBrowserCount = 0;
-
 
 public:
 	// Other stuff
@@ -208,8 +207,6 @@ public:
 
 	olc::vf3d vf3dAxisXMaxX = { 0.0f, 0.0f, 0.0f };
 	olc::vf3d vf3dAxisYMaxY = { 0.0f, 0.0f, 0.0f };
-
-
 
 public:
 
@@ -328,21 +325,20 @@ public:
 		bool bShowEventHorizonXAxis = false;	// Show/Hide Event Horizon X Axis
 		bool bShowEventHorizonYAxis = false;	// Show/Hide Event Horizon Y Axis
 		bool bShowXYLightGrid = false;		// Show/Hide XY Light Grid
-		bool bShowFullLightGrid = false;	// Show/Hide Full Grid
+		bool bShowFullLightGrid = true;	// Show/Hide Full Grid
 		bool bShowXDisk = false;			// Show/Hide X Disk
 		bool bShowYDisk = false;			// Show/Hide Y Disk
 		bool bShowSun = false;				// Show/Hide Sun
 		bool bShowStars = true;				// Show/Hide Stars
 		bool bShowEarth = false;			// Show/Hide Earth
-		bool bShowDebugObjects = false;		// Show/Hide Debug Objects
+		bool bShowDebugObjects = true;		// Show/Hide Debug Objects
 		bool bPause2DRay = false;			// Run/Pause the 2d Ray
-		bool bShowExtraInfo = false;		// Shows extra infor
+		bool bShowExtraInfo = false;		// Shows extra infor													
 	} sHideShowMenu;
 
 	// Menu messages break
 	std::string sMenuMessageBreak = "----------------------------------";
 	std::string sMenuEmptyLine = "   ";
-
 
 	olc::Renderable CreateBlackHoleEventHorizon(float radius) {
 		olc::Renderable ren;
@@ -481,8 +477,8 @@ public:
 					}
 
 				}
-					
-					
+
+
 			}
 		}
 
@@ -494,7 +490,7 @@ public:
 
 		vf3dAxisXMaxX = { 0.0f, 0.0f, 0.0f };
 		vf3dAxisYMaxY = { 0.0f, 0.0f, 0.0f };
-		
+
 		finalXYRayPoints.clear();
 		std::unordered_set<olc::vf3d> raysToRemove;
 		for (auto& ray : rays) {
@@ -506,12 +502,12 @@ public:
 
 				const auto& p = ray.viewPortTrail[i];
 				auto result = raysToRemove.insert(p);
-				if(result.second) {
-					
+				if (result.second) {
+
 					if (std::abs(p.x) < 1.0) {
 						finalXYRayPoints.push_back(std::make_pair(olc::vf3d{ p.x, p.y, p.z }, olc::YELLOW.n));
 
-						if(vf3dAxisXMaxX.x < std::abs(p.x))
+						if (vf3dAxisXMaxX.x < std::abs(p.x))
 							vf3dAxisXMaxX = { p.x, p.y, p.z };
 					}
 
@@ -553,14 +549,14 @@ public:
 		olc::vf2d vf2dGridMax = { GridSettings.x, GridSettings.x };
 		olc::vf2d gridCenterPos = { GridSettings.x / 2.0f, GridSettings.x / 2.0f };
 		olc::vf3d object3DCenterPos = ConvertWorldViewPosToViewPortPos(spaceObject.vPosition);
-		olc::vf2d objectCenterPos = { object3DCenterPos.x, object3DCenterPos.y};
+		olc::vf2d objectCenterPos = { object3DCenterPos.x, object3DCenterPos.y };
 
 		//1 check if the object is on the grid
 		int32_t gridHalfX = int32_t(GridSettings.x / 2);
 		int32_t radius = int32_t(vf3dAxisXMaxX.y / 2);
 
 		olc::vi2d object3DGridStartPos = { int32_t(objectCenterPos.x + ((object3DCenterPos.x - radius) + gridCenterPos.x)), int32_t(objectCenterPos.y + ((object3DCenterPos.y - radius) + gridCenterPos.y)) };
-		olc::vi2d object3DGridEndPos = { int32_t(objectCenterPos.x + ((object3DCenterPos.x + radius) + gridCenterPos.x)), int32_t((objectCenterPos.x + (object3DCenterPos.y + radius)+gridCenterPos.x)) };
+		olc::vi2d object3DGridEndPos = { int32_t(objectCenterPos.x + ((object3DCenterPos.x + radius) + gridCenterPos.x)), int32_t((objectCenterPos.x + (object3DCenterPos.y + radius) + gridCenterPos.x)) };
 
 
 		// We know the Schwarzschild radius, but need it is viewPort space
@@ -593,14 +589,7 @@ public:
 				posy += fYNextAMount;
 			}
 
-
 		}
-
-
-	
-
-	
-
 
 
 	}
@@ -622,12 +611,12 @@ public:
 		const int32_t nYellow = olc::YELLOW.n;
 		const int32_t nWhite = olc::WHITE.n;
 
-		for(auto& p : finalRayPoints)
+		for (auto& p : finalRayPoints)
 		{
 			HW3D_DrawLine((mf4dWorld).m, { p.first.x, p.first.y, p.first.z }, { p.first.x + 0.01f, p.first.y, p.first.z }, p.second);
 		}
 
-		
+
 	}
 
 	// Draws a single ray step in 3D space using RK4 integration
@@ -905,6 +894,7 @@ public:
 		}
 
 		// Create required matrices
+		meshGravityGrid = olc::utils::hw3d::Create3DTorusGrid(1.0f, 0.9f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));
 		meshSphere = olc::utils::hw3d::CreateSphere();								// Default sphere
 		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.1f, 0.1f, 64, 32);		// Default Event Horizon
 		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon X Axis
@@ -912,8 +902,7 @@ public:
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
 		//meshGravityGrid = olc::utils::hw3d::CreateGrid(vd2dGravityGridSetting.x, vd2dGravityGridSetting.y);					// Default Grid
-		meshGravityGrid = olc::utils::hw3d::Create3DTorus(1.0f, 0.9f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));
-		
+
 
 
 		// Load any textures here
@@ -1216,7 +1205,7 @@ public:
 		DrawDecal({ 0.0f, 0.0f }, renBackGround2D.Decal());
 		olc::vf2d vCenterPos = { float(ScreenWidth()) / 2.0f, float(ScreenHeight()) / 2.0f };
 		DrawDecal(vCenterPos - olc::vf2d(renBlackHoleDecal.Sprite()->width / 2.0f, renBlackHoleDecal.Sprite()->height / 2.0f), renBlackHoleDecal.Decal());
-		
+
 
 		if (GetKey(olc::Key::R).bPressed)
 		{
@@ -1233,7 +1222,7 @@ public:
 		{
 			for (auto& ray : rays2D) {
 				RayStep2D(ray, 1.0f, SagittariusA.r_s);
-				
+
 			}
 		}
 		DrawRays2D(rays2D);
@@ -1242,9 +1231,12 @@ public:
 	// Shows the 3D world 
 	void Display3DWorld(float fElapsedTime)
 	{
-		std::string sMenuMessage = "...";
+		// Temp vars
+		std::string sMenuMessage = "";
 		// 3D Render section
 		olc::mf4d mRotationX, mRotationY, mRotationZ;  // Rotation Matrices
+		olc::mf4d mCubeTrans, mCubeScale;
+		olc::mf4d mf4dSkyCubeTrans, mf4dSkyCubeScale, mf4dSkyCubeRotationX, mf4dSkyCubeRotationY, mf4dSkyCubeRotationZ;
 		olc::mf4d mSphereTrans, mSphereScale, mSphereRotationX, mSphereRotationY, mSphereRotationZ;
 		olc::mf4d mEventHozTrans, mEventHozScale, mEventHozRotationX, mEventHozRotationY, mEventHozRotationZ;
 		olc::mf4d mEventHozTransY, mEventHozScaleY, mEventHozRotationXY, mEventHozRotationYY, mEventHozRotationZY;
@@ -1255,6 +1247,7 @@ public:
 
 		// Setup Event Horizon
 		mEventHozTrans.translate(vf3dEventHorizonLocation);
+
 		mEventHozRotationY.rotateY(fTheta);
 		mEventHozRotationX.rotateX(fYaw + RadAngleOfAttack);
 
@@ -1297,6 +1290,9 @@ public:
 		mGravityGridRotationZ.rotateZ(fEventHorizonXAxis);
 		mf4dGravityGrid = mf4dGravityGrid * mGravityGridRotationZ;
 		mGravityGridScale.scale(vf3dGravityGridScale);
+
+
+
 		mf4dGravityGrid = mf4dGravityGrid * mGravityGridScale;
 		// Setup Camera
 		olc::vf3d vf3dTarget = { 0,0,1 };
@@ -1331,28 +1327,27 @@ public:
 		if (sHideShowMenu.bShowStars)
 			HW3D_DrawObject((mf4dWorld * mf4dBackGround).m, renBackGround.Decal(), meshBackGround.layout, meshBackGround.pos, meshBackGround.uv, meshBackGround.col);
 
+
 		// Draw the black hole
 		if (sHideShowMenu.bShowBlackHole)
 			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, nullptr, meshBlackHole.layout, meshBlackHole.pos, meshBlackHole.uv, meshBlackHole.col);
 
 		// Draw the Event Horizon
 		if (sHideShowMenu.bShowEventHorizon)
-			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renEventHorizon.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizon).m, renStar.Decal(), meshEventHorizon.layout, meshEventHorizon.pos, meshEventHorizon.uv, meshEventHorizon.col);
 
 
 		// Draw the Event Horizon Y Axis
 		if (sHideShowMenu.bShowEventHorizonYAxis)
-			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonYAxis).m, renEventHorizonY.Decal(), meshEventHorizonY.layout, meshEventHorizonY.pos, meshEventHorizonY.uv, meshEventHorizonY.col);
+			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonYAxis).m, renEventHorizonX.Decal(), meshEventHorizonY.layout, meshEventHorizonY.pos, meshEventHorizonY.uv, meshEventHorizonY.col);
 
 		// Draw the Event Horizon X Axis
-		if(sHideShowMenu.bShowEventHorizonXAxis)
+		if (sHideShowMenu.bShowEventHorizonXAxis)
 			HW3D_DrawObject((mf4dWorld * mf4dEventHorizonXAxis).m, renEventHorizonX.Decal(), meshEventHorizonX.layout, meshEventHorizonX.pos, meshEventHorizonX.uv, meshEventHorizonX.col);
 
 		// Draw the Gravity Grid
 		if (sHideShowMenu.bShowGravityGrid)
 			HW3D_DrawObject((mf4dWorld * mf4dGravityGrid).m, nullptr, meshGravityGrid.layout, meshGravityGrid.pos, meshGravityGrid.uv, meshGravityGrid.col);
-
-		
 
 		// Some debugging lines and boxes
 		if (sHideShowMenu.bShowDebugObjects)
@@ -1384,12 +1379,36 @@ public:
 
 		if (sHideShowMenu.bShowFullLightGrid)
 		{
+			if (loadRaysStatus.bRaysLoaded == false && loadRaysStatus.bLoadingRays == false)
+			{
+				if (rays3D.size() < 1) rays3D.push_back(Ray3D(vd2dLoopyLoop3D, ConvertWorldViewPosToViewPortPos(vd2dLoopyLoop3D), vd2dConstLightDirZ, SagittariusA, olc::YELLOW.n));
+				ReloadRays();
+			}
+			else
+			{
+				if (loadRaysStatus.bRaysLoaded)
+					DrawRays3Ds_Threaded(rays3D);
+			}
+
+		}
+		if (sHideShowMenu.bShowFullLightGrid)
+		{
+
+
+
+
+
+
+
 			if (loadRaysStatus.bRaysLoaded)
 				DrawRays3Ds_Threaded(rays3D);
 		}
 
+
+
 		if (sHideShowMenu.bShowXYLightGrid)
 		{
+
 			if (loadRaysStatus.bRaysLoaded)
 				DrawFinalRayPoints();
 
@@ -1462,7 +1481,7 @@ public:
 		std::string sMenuMessage = "Press S to show/hide 3D World";
 		AddMessage(sMenuMessage);
 		AddMessage(sMenuMessageBreak);
-;
+		;
 		sMenuMessage = "Press R to reset ray";
 		AddMessage(sMenuMessage);
 		sMenuMessage = "Press SPACE to pause/resume ray movement";
@@ -1645,10 +1664,10 @@ public:
 		AddMessage(sMenuMessage);
 		sMenuMessage = "... I didn't have time to warp it, therefore I just added a second ring to show what it would look like.";
 		AddMessage(sMenuMessage);
-		
+
 
 	}
-	
+
 
 	// Update the Event Horizon Axis X/Y rotation z
 	void UpdateEventHorizonRotationZ(float fElapsedTime)
@@ -1667,10 +1686,10 @@ public:
 		size_t szRayTotal = 0.0f;
 		if (loadRaysStatus.bRaysLoaded)
 		{
-			for(auto& ray : rays3D)
+			for (auto& ray : rays3D)
 			{
 				szRayTotal += ray.viewPortTrail.size();
-				
+
 			}
 			AddMessage(sMenuEmptyLine);
 			AddMessage(sMenuMessageBreak);
@@ -1680,13 +1699,13 @@ public:
 			AddMessage(sMenuMessage);
 			sMenuMessage = "Total Optimized X/Y Ray Count: " + std::to_string(finalXYRayPoints.size());
 			AddMessage(sMenuMessage);
-            sMenuMessage = "Total Ray Optimization Ratio: " + std::to_string((float)finalXYRayPoints.size() / (float)finalRayPoints.size() * 100.0f) + "%";
+			sMenuMessage = "Total Ray Optimization Ratio: " + std::to_string((float)finalXYRayPoints.size() / (float)finalRayPoints.size() * 100.0f) + "%";
 			AddMessage(sMenuMessage);
 			AddMessage(sMenuMessageBreak);
 			AddMessage(sMenuEmptyLine);
 		}
-		
-		
+
+
 	}
 
 	void DisplayCredits()
