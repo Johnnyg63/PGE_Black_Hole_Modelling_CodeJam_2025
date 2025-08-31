@@ -907,12 +907,12 @@ public:
 		// Create required matrices
 		meshSphere = olc::utils::hw3d::CreateSphere();								// Default sphere
 		meshEventHorizon = olc::utils::hw3d::Create3DTorus(1.1f, 0.1f, 64, 32);		// Default Event Horizon
-		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::DecalStructure::LIST, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon X Axis
-		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::DecalStructure::LIST, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon Y Axis
+		meshEventHorizonX = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon X Axis
+		meshEventHorizonY = olc::utils::hw3d::Create3DTorus(1.0f, 0.5f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));	// Default Event Horizon Y Axis
 		meshBlackHole = olc::utils::hw3d::Create2DCircle(1.0f, 128, olc::BLACK);	// Default Black Hole
 		meshBackGround = olc::utils::hw3d::CreateSphere();							// Default sphere for background
 		//meshGravityGrid = olc::utils::hw3d::CreateGrid(vd2dGravityGridSetting.x, vd2dGravityGridSetting.y);					// Default Grid
-		meshGravityGrid = olc::utils::hw3d::Create3DTorus(1.0f, 0.9f, 128, 64, olc::DecalStructure::LINE, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));
+		meshGravityGrid = olc::utils::hw3d::Create3DTorus(1.0f, 0.9f, 128, 64, olc::PixelF(1.0f, 1.0f, 1.0f, 0.7f));
 		
 
 

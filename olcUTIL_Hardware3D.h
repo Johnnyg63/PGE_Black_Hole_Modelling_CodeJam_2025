@@ -240,10 +240,10 @@ namespace olc
 		inline constexpr v_3d lerp(const v_3d& v1, const double t) const
 		{
 			// Fix for E0135: class "olc::v_3d<double>" has no member "operator*"
-            // Change this line in v_3d::lerp:
-            // return this->operator*(T(1.0 - t)) + (v1 * T(t));
-            // To:
-            return (*this) * T(1.0 - t) + (v1 * T(t));
+			// Change this line in v_3d::lerp:
+			// return this->operator*(T(1.0 - t)) + (v1 * T(t));
+			// To:
+			return (*this) * T(1.0 - t) + (v1 * T(t));
 		}
 
 		// Compare if this vector is numerically equal to another
@@ -1823,7 +1823,7 @@ namespace olc::utils::hw3d
 		olc::utils::hw3d::mesh m;
 		auto meshPushBack = [&](vf3d pos, vf2d uv, olc::Pixel col = olc::WHITE)
 			{
-				vf3d vf3dNorm = pos.norm();										
+				vf3d vf3dNorm = pos.norm();
 				m.pos.push_back({ pos.x, pos.y, pos.z });						// COORDINATES
 				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
 				m.uv.push_back({ uv.x, uv.y });									// TexCoord
@@ -1841,12 +1841,9 @@ namespace olc::utils::hw3d
 	}
 
 	/*
-	* Creates a Torus 
+	* Creates a Torus
 	*/
-	olc::utils::hw3d::mesh Create3DTorus(float fMajorRadius, float fMinorRadius, 
-											int32_t nMajorSegments = 64, int32_t nMinorSegments = 32, 
-											olc::DecalStructure decalStructure = olc::DecalStructure::LIST,
-											olc::Pixel pixelCol = olc::WHITE)
+	olc::utils::hw3d::mesh Create3DTorus(float fMajorRadius, float fMinorRadius, int32_t nMajorSegments = 64, int32_t nMinorSegments = 32, olc::Pixel pixelCol = olc::WHITE)
 	{
 		olc::utils::hw3d::mesh m;
 		float theta0 = 0.0f;
@@ -1919,7 +1916,86 @@ namespace olc::utils::hw3d
 			}
 		}
 
-		m.layout = decalStructure;
+		return m;
+
+
+	}
+
+	olc::utils::hw3d::mesh Create3DTorusGrid(float fMajorRadius, float fMinorRadius, int32_t nMajorSegments = 64, int32_t nMinorSegments = 32, olc::Pixel pixelCol = olc::WHITE)
+	{
+		olc::utils::hw3d::mesh m;
+		float theta0 = 0.0f;
+		float theta1 = 0.0f;
+		float phi0 = 0.0f;
+		float phi1 = 0.0f;
+		float x, y, z;
+
+		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
+			{
+				m.pos.push_back({ pos.x, pos.y, pos.z });			// COORDINATES
+				m.norm.push_back({ norm.x, norm.y, norm.z, 0 });	// NORMS
+				m.uv.push_back({ uv.x, uv.y });						// TexCoord
+				m.col.push_back(col);								// COLOURS
+			};
+
+		for (int i = 0; i < nMajorSegments; ++i)
+		{
+			theta0 = 2.0f * M_PI * i / nMajorSegments;
+			theta1 = 2.0f * M_PI * (i + 1) / nMajorSegments;
+
+			for (int j = 0; j < nMinorSegments; ++j)
+			{
+				phi0 = 2.0f * M_PI * j / nMinorSegments;
+				phi1 = 2.0f * M_PI * (j + 1) / nMinorSegments;
+
+				// Four points of the quad
+				auto getVertex = [&](float theta, float phi) -> olc::vf3d
+					{
+						x = (fMajorRadius + fMinorRadius * cos(phi)) * cos(theta);
+						y = (fMajorRadius + fMinorRadius * cos(phi)) * sin(theta);
+						z = fMinorRadius * sin(phi);
+						return { x, y, z };
+					};
+
+				olc::vf3d p00 = getVertex(theta0, phi0);
+				olc::vf3d p01 = getVertex(theta0, phi1);
+				olc::vf3d p10 = getVertex(theta1, phi0);
+				olc::vf3d p11 = getVertex(theta1, phi1);
+
+				// Normals (from center of tube to surface)
+				auto getNormal = [&](float theta, float phi) -> olc::vf3d
+					{
+						x = cos(theta) * cos(phi);
+						y = sin(theta) * cos(phi);
+						z = sin(phi);
+						return olc::vf3d(x, y, z).norm();
+					};
+
+				olc::vf3d n00 = getNormal(theta0, phi0);
+				olc::vf3d n01 = getNormal(theta0, phi1);
+				olc::vf3d n10 = getNormal(theta1, phi0);
+				olc::vf3d n11 = getNormal(theta1, phi1);
+
+				// UVs
+				olc::vf2d uv00 = { float(i) / nMajorSegments, float(j) / nMinorSegments };
+				olc::vf2d uv01 = { float(i) / nMajorSegments, float(j + 1) / nMinorSegments };
+				olc::vf2d uv10 = { float(i + 1) / nMajorSegments, float(j) / nMinorSegments };
+				olc::vf2d uv11 = { float(i + 1) / nMajorSegments, float(j + 1) / nMinorSegments };
+
+				// First triangle
+				meshPushBack(p00, n00, uv00, pixelCol);
+				meshPushBack(p10, n10, uv10, pixelCol);
+				meshPushBack(p11, n11, uv11, pixelCol);
+
+				// Second triangle
+				meshPushBack(p00, n00, uv00, pixelCol);
+				meshPushBack(p11, n11, uv11, pixelCol);
+				meshPushBack(p01, n01, uv01, pixelCol);
+			}
+		}
+
+		m.layout = olc::DecalStructure::LINE;
+
 		return m;
 
 
@@ -1964,15 +2040,15 @@ namespace olc::utils::hw3d
 	}
 
 
-    olc::utils::hw3d::mesh CreateCircleDisk(float fRadius, float thickness, int32_t nSegmentCount = 64, olc::Pixel pixelCol = olc::WHITE)
-    {
+	olc::utils::hw3d::mesh CreateCircleDisk(float fRadius, float thickness, int32_t nSegmentCount = 64, olc::Pixel pixelCol = olc::WHITE)
+	{
 		olc::utils::hw3d::mesh m;
 		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
 			{
-			m.pos.push_back({ pos.x, pos.y, pos.z });
-			m.norm.push_back({ norm.x, norm.y, norm.z, 0 });
-			m.uv.push_back({ uv.x, uv.y });
-			m.col.push_back(col);
+				m.pos.push_back({ pos.x, pos.y, pos.z });
+				m.norm.push_back({ norm.x, norm.y, norm.z, 0 });
+				m.uv.push_back({ uv.x, uv.y });
+				m.col.push_back(col);
 			};
 
 		float r0 = fRadius - thickness * 0.5f;
@@ -2016,46 +2092,10 @@ namespace olc::utils::hw3d
 		}
 		return m;
 
-    }
-
-	// Creates a grid mesh (with triangles)
-	olc::utils::hw3d::mesh CreateGrid(float fSize = 10.0f, int32_t nLines = 10, olc::DecalStructure declLayout = olc::DecalStructure::LINE, olc::Pixel pixelCol = olc::WHITE)
-	{
-		olc::utils::hw3d::mesh m;
-		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
-			{
-				olc::vf3d vf3dNorm = pos.norm();
-				m.pos.push_back({ pos.x, pos.y, pos.z });			// COORDINATES
-				m.norm.push_back({ vf3dNorm.x, vf3dNorm.y, vf3dNorm.z, 0 });	// NORMS
-				m.uv.push_back({ uv.x, uv.y });						// TexCoord
-				m.col.push_back(col);								// COLOURS
-			};
-
-		float halfSize = fSize * 0.5f;
-		float step = fSize / nLines;
-		for (int i = 0; i <= nLines; ++i)
-		{
-			float pos = -halfSize + i * step;
-			// Lines along X axis
-			meshPushBack({ -halfSize, 0.0f, pos }, { 0, 1, 0 }, { 0, 0 }, pixelCol);
-			meshPushBack({ halfSize, 0.0f, pos }, { 0, 1, 0 }, { 0, 1 }, pixelCol);
-			meshPushBack({ pos, 0.0f, -halfSize }, { 0, 1, 0 }, { 1, 0 }, pixelCol);
-
-			// Lines along Z axis
-			meshPushBack({ pos, 0.0f, halfSize }, { 0, 1, 0 }, { 0, 0 }, pixelCol);
-			meshPushBack({ halfSize, 0.0f, pos }, { 0, 1, 0 }, { 0, 1 }, pixelCol);
-			meshPushBack({ pos, 0.0f, -halfSize }, { 0, 1, 0 }, { 1, 0 }, pixelCol);
-			
-			
-		}
-		m.layout = declLayout;
-		
-		return m;
 	}
 
 
-	// Creates a fixed line grid (no triangles, just lines)
-	olc::utils::hw3d::mesh CreateFixLineGrid(float fSize = 10.0f, int32_t nLines = 10, olc::Pixel pixelCol = olc::WHITE)
+	olc::utils::hw3d::mesh CreateGrid(float fSize = 10.0f, int32_t nLines = 10, olc::Pixel pixelCol = olc::WHITE)
 	{
 		olc::utils::hw3d::mesh m;
 		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
@@ -2075,122 +2115,14 @@ namespace olc::utils::hw3d
 			meshPushBack({ -halfSize, 0.0f, pos }, { 0, 1, 0 }, { 0, 0 }, pixelCol);
 			meshPushBack({ halfSize, 0.0f, pos }, { 0, 1, 0 }, { 1, 0 }, pixelCol);
 			// Lines along Z axis
-			meshPushBack({ pos, 0.0f, -halfSize }, { 0, 1, 0 }, { 1, 1 }, pixelCol);
-			meshPushBack({ halfSize, 0.0f, pos }, { 0, 1, 0 }, { 1, 0 }, pixelCol);
-			
-
-
+			meshPushBack({ pos, 0.0f, -halfSize }, { 0, 1, 0 }, { 0, 1 }, pixelCol);
+			meshPushBack({ pos, 0.0f, halfSize }, { 0, 1, 0 }, { 1, 1 }, pixelCol);
 		}
 		m.layout = olc::DecalStructure::LINE;
 
 		return m;
 	}
 
-
-	// Creates a Toroidal Grid
-	olc::utils::hw3d::mesh CreateToroidalGrid(float fMajorRadius = 1.0f, float fMinorRadius = 0.5f, 
-												int32_t nMajorSegments = 64, int32_t nMinorSegments = 16,
-												olc::DecalStructure decalStructure = olc::DecalStructure::LINE,
-												olc::Pixel pixelCol = olc::WHITE)
-	{
-		olc::utils::hw3d::mesh m;
-		float theta0 = 0.0f;
-		float theta1 = 0.0f;
-		float phi0 = 0.0f;
-		float phi1 = 0.0f;
-		float x, y, z;
-
-
-		olc::vf3d p00 = { 0.0f, 0.0f, 0.0f };
-		olc::vf3d p01 = { 0.0f, 0.0f, 0.0f };
-		olc::vf3d p10 = { 0.0f, 0.0f, 0.0f };
-		olc::vf3d p11 = { 0.0f, 0.0f, 0.0f };
-
-		olc::vf3d n00 = { 0.0f, 0.0f, 0.0f };
-		olc::vf3d n01 = { 0.0f, 0.0f, 0.0f };
-		olc::vf3d n10 = { 0.0f, 0.0f, 0.0f };
-		olc::vf3d n11 = { 0.0f, 0.0f, 0.0f };
-
-		olc::vf2d uv00 = { 0.0f, 0.0f };
-		olc::vf2d uv01 = { 0.0f, 1.0f };
-		olc::vf2d uv10 = { 1.0f, 0.0f };
-		olc::vf2d uv11 = { 1.0f, 1.0f };
-
-		auto meshPushBack = [&](olc::vf3d pos, olc::vf3d norm, olc::vf2d uv, olc::Pixel col = olc::WHITE)
-			{
-				m.pos.push_back({ pos.x, pos.y, pos.z });			// COORDINATES
-				m.norm.push_back({ norm.x, norm.y, norm.z, 0 });	// NORMS
-				m.uv.push_back({ uv.x, uv.y });						// TexCoord
-				m.col.push_back(col);								// COLOURS
-			};
-
-		// Copilot helped here
-		// I couldnt get my head around the Toroidal Grid during the CodeJam 2025, so I asked Copilot to help me out
-		// It did a pretty good job, but I had to fix a few things
-
-		for (int i = 0; i < nMajorSegments; ++i)
-		{
-			theta0 = 2.0f * M_PI * i / nMajorSegments;
-			theta1 = 2.0f * M_PI * (i + 1) / nMajorSegments;
-
-			for (int j = 0; j < nMinorSegments; ++j)
-			{
-				phi0 = 2.0f * M_PI * j / nMinorSegments;
-				phi1 = 2.0f * M_PI * (j + 1) / nMinorSegments;
-
-				// Four points of the quad
-				auto getVertex = [&](float theta, float phi) -> olc::vf3d
-					{
-						x = (fMajorRadius + fMinorRadius * cos(phi)) * cos(theta);
-						y = (fMajorRadius + fMinorRadius * cos(phi)) * sin(theta);
-						z = fMinorRadius * sin(phi);
-						return { x, y, z };
-					};
-
-				p00 = getVertex(theta0, phi0);
-				p01 = getVertex(theta0, phi1);
-				p10 = getVertex(theta1, phi0);
-				p11 = getVertex(theta1, phi1);
-
-				// Normals (from center of tube to surface)
-				auto getNormal = [&](float theta, float phi) -> olc::vf3d
-					{
-						x = cos(theta) * cos(phi);
-						y = sin(theta) * cos(phi);
-						z = sin(phi);
-						return olc::vf3d(x, y, z).norm();
-					};
-
-				n00 = getNormal(theta0, phi0);
-				n01 = getNormal(theta0, phi1);
-				n10 = getNormal(theta1, phi0);
-				n11 = getNormal(theta1, phi1);
-				// UVs
-				uv00 = { float(i) / nMajorSegments, float(j) / nMinorSegments };
-				uv01 = { float(i) / nMajorSegments, float(j + 1) / nMinorSegments };
-				uv10 = { float(i + 1) / nMajorSegments, float(j) / nMinorSegments };
-				uv11 = { float(i + 1) / nMajorSegments, float(j + 1) / nMinorSegments };
-			}
-
-			// First triangle
-			meshPushBack(p00, n00, uv00, pixelCol);
-			meshPushBack(p10, n10, uv10, pixelCol);
-			meshPushBack(p11, n11, uv11, pixelCol);
-			// Second triangle
-			meshPushBack(p00, n00, uv00, pixelCol);
-			meshPushBack(p11, n11, uv11, pixelCol);
-			meshPushBack(p01, n01, uv01, pixelCol);
-		}
-
-		m.layout = decalStructure;
-
-		return m;
-
-	}
-
-
-
-	
 	// End John Galvin
 
 	class Camera3D
